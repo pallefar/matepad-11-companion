@@ -4,6 +4,12 @@ A Windows companion for [run2000s/MatePad11_Tool_Kit_GUI](https://github.com/run
 
 ![Overview](docs/img/overview.jpg)
 
+## Download
+
+**[Latest public release](https://github.com/pallefar/matepad-11-companion/releases/latest)** — portable Windows 10/11 x64 app ZIP. The executable is unsigned, so SmartScreen may ask for **More info → Run anyway**.
+
+The public release contains the **app only**. It does not contain the proprietary Huawei/Qualcomm files or the preloaded workspace ZIP. Use **Tool pack → Fetch external pack** (pinned sources and SHA-256) or import your own legally obtained pack.
+
 ## Why this exists
 
 The upstream project is source-only. There is no release, no bundled tool pack, and it is a .NET 8 / WinUI 3 build. Its own home screen checks only three files (`adb.exe`, `fastboot.exe`, `7z.exe`) — the unlock images, Qualcomm EDL tools, drivers, APatch tools and ramdisk images are discovered much later, mid-procedure.
@@ -11,7 +17,7 @@ The upstream project is source-only. There is no release, no bundled tool pack, 
 This companion adds the missing layer:
 
 - **Prepare** — detect Windows/.NET, download the GPL source, install .NET 8 per-user if needed, run `dotnet publish`, launch the result.
-- **Provision** — inventory all 27 expected paths, auto-download open tools, **fetch the four signed/Qualcomm files in one step with pinned SHA-256**, or import the original pack. A ready-made workspace ZIP is included with the APatch set already in the exact layout.
+- **Provision** — inventory all 27 expected paths, auto-download open tools, **fetch the four signed/Qualcomm files in one step with pinned SHA-256**, or import the original pack. The local build can also produce a ready-made workspace ZIP with the APatch set in the exact layout; that proprietary bundle is not part of the public release.
 - **Read the device** — model, HarmonyOS version, API, battery, storage, USB authorization, bootloader state, root check, 9008/EDL COM presence.
 - **Route** — HarmonyOS 2/3 gets the ADB → EDL path; HarmonyOS 4 gets the engineering-cable/downgrade path, never the wrong one.
 - **Gate** — DBY-W09 only, battery and disk checks, data-wipe acknowledgement, tool-pack completeness, typed `WIPE` confirmation.
@@ -61,11 +67,11 @@ See **[docs/TOOL-PACK.md](docs/TOOL-PACK.md)** for full provenance, hashes and c
 
 ## Quick start on the Windows PC
 
-1. Copy **`dist/MatePad-11-Companion-1.0.0-win-x64.zip`** and **`dist/MatePad-11-Workspace-1.0.0.zip`** to the Windows 10/11 x64 PC.
+1. Download **`MatePad-11-Companion-1.0.0-win-x64.zip`** from the [latest release](https://github.com/pallefar/matepad-11-companion/releases/latest), or use the ZIP built in this workspace. Copy the app ZIP to the Windows 10/11 x64 PC.
 2. Unzip the app anywhere writable (not `Program Files`). Run **`MatePad 11 Companion.exe`**. It is unsigned, so SmartScreen may show “Windows protected your PC” → **More info → Run anyway**.
 3. Choose the workspace:
-   - **Recommended:** unzip `MatePad-11-Workspace-1.0.0.zip`, then in **Prepare → Change folder** select its `MatePad11` folder. The tool pack is already complete (APatch 10/10); the build writes `MatePadToolbox.exe` into it.
-   - **Fresh workspace:** keep the default folder, then **Tool pack → Fetch external pack**, or import the original pack.
+   - **Public release / fresh workspace:** keep the default folder. Open **Tool pack**, press **Fetch external pack**, and download the open tools (platform-tools, 7-Zip, KernelPatch, Magisk, APatch). Or import the original pack if you already have it.
+   - **Local preloaded workspace:** if you have the separate `MatePad-11-Workspace-1.0.0.zip`, unzip it and select its `MatePad11` folder in **Prepare → Change folder**. That bundle is not in the public release because it contains proprietary third-party files; the build writes `MatePadToolbox.exe` into it.
 4. **Prepare → Download & build**. The app installs .NET 8 locally if needed, fetches the GPL source, runs `dotnet publish`, and shows the full log.
 5. **Device** → enable USB debugging, connect a data cable, accept the RSA prompt, press **Detect tablet**. Confirm DBY-W09 and the HarmonyOS branch.
 6. **Unlock** → read the preflight, type `WIPE`, confirm the backup, then **Open toolkit → Unlock BL** and follow the branch-specific steps. Verify with **Check bootloader** (`fastboot getvar unlocked` → `yes`).
