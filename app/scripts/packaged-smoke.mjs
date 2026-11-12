@@ -15,6 +15,11 @@ await page.waitForFunction(() => window.__companionReady === true, null, { timeo
 console.log('title:', await page.title());
 console.log('h1:', await page.locator('h1').first().innerText());
 console.log('phases:', await page.locator('.phase').count());
+await page.locator('.nav-item[data-nav="device"]').click();
+await page.waitForTimeout(500);
+const checkCount = await page.locator('.system-check').count();
+console.log('system check:', checkCount, (await page.locator('.system-check').innerText()).slice(0, 80).replace(/\n/g, ' '));
+if (!checkCount) errors.push('packaged system check card did not render');
 await page.screenshot({ path: 'screens/packaged-asar.png' });
 await page.locator('[data-action="toggle-theme"]').click();
 await page.waitForTimeout(600);

@@ -8,7 +8,7 @@ Proprietary tool pack: **none** (a synthetic pack was used)
 
 This file records what actually ran. It is deliberately narrower than “the app works on Windows”.
 
-## Automated unit tests — 39 passed
+## Automated unit tests — 44 passed
 
 Command: `cd app && npm test`
 
@@ -22,11 +22,12 @@ Coverage:
 - ZIP traversal rejection and safe extraction.
 - Importer: mixed folder → canonical layout, arbitrary ramdisk `.img`, demo refusal.
 - State: demo overlay does not overwrite real settings, language/progress/theme reload, reset semantics; theme validation and demo/real preference synchronization.
+- System-check parsers: adb/fastboot versions, package list, Magisk/APatch/KernelSU, developer settings, su, Windows PnP classification, summary states.
 - EDL PowerShell JSON parsing (object/array/prefixed/BOM-less), COM extraction.
 
-Result: **39 pass, 0 fail**. All renderer translation keys used literally are present in both `en` and `zh` (369 literal keys checked; dynamic keys spot-checked).
+Result: **44 pass, 0 fail**. All renderer translation keys used literally are present in both `en` and `zh` (423 literal keys checked; dynamic keys spot-checked).
 
-## End-to-end — 27 checks passed
+## End-to-end — 29 checks passed
 
 Command: `cd app && node scripts/e2e.mjs` (Playwright launches the real Electron app).
 
@@ -62,8 +63,10 @@ Live workspace profile (macOS):
 25. Typed `WIPE` + backup checkbox records the acknowledgement and updates the UI.
 26. **Ready workspace** (25 files) loaded by the app: APatch 10/10, drivers present, external pack 5/5, manifest and tool files validated.
 27. Light mode: topbar toggle applies light tokens (body `rgb(244, 241, 234)`), persists across reload, restores dark; Appearance control and no-overflow checks pass.
+28. System check: real tool checks, Windows driver rows, phone developer/USB/bootloader/root state, Magisk/APatch/KernelSU/su; `Run check` completes with no errors.
+29. Live system check: real adb + fastboot version commands execute on this Mac and report pass; drivers correctly report Windows-only.
 
-Result: **27 pass, 0 fail, zero console errors, zero page errors.**
+Result: **29 pass, 0 fail, zero console errors, zero page errors.**
 
 ## Download endpoints actually exercised
 
@@ -82,7 +85,7 @@ Result: **27 pass, 0 fail, zero console errors, zero page errors.**
 ## Windows package
 
 - Built with `electron-packager` for `win32-x64`, Electron 33.4.11, asar, icon.
-- `MatePad 11 Companion.exe` is a PE32+ x86-64 GUI executable; `resources/app.asar` is about 610 KB and contains only runtime files (`main.js`, `preload.js`, `src/**`, `node_modules/adm-zip`, licenses, README-FIRST). Tests, scripts, screenshots, docs, and build assets are excluded.
+- `MatePad 11 Companion.exe` is a PE32+ x86-64 GUI executable; `resources/app.asar` is about 661 KB and contains only runtime files (`main.js`, `preload.js`, `src/**`, `node_modules/adm-zip`, licenses, README-FIRST). Tests, scripts, screenshots, docs, and build assets are excluded.
 - A macOS asar build from the same configuration was launched with Playwright: title, Overview, six phases, zero renderer errors. This validates asar packaging, not the Windows binary.
 - The ready workspace ZIP was built separately (25 files, 37.9 MiB expanded / 24.9 MiB ZIP) and validated against the app inventory and its own manifest.
 - The final app ZIP is rebuilt after the external-pack feature; see `dist/CHECKSUMS.txt` for its SHA-256.

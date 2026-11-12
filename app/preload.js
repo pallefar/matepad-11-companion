@@ -30,6 +30,7 @@ const api = {
   openExternal: (url) => invoke('app:open-external', { url }),
   refresh: () => invoke('app:refresh'),
   refreshDevice: () => invoke('app:refresh-device'),
+  systemCheck: () => invoke('app:system-check'),
   detectEdl: () => invoke('app:detect-edl'),
   installDownload: (id) => invoke('app:install-download', { id }),
   installExternalPack: () => invoke('app:install-external'),

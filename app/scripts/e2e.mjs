@@ -115,6 +115,8 @@ async function snap(page) {
   await goto(page, 'settings');
   assert.equal(await page.locator('#view [data-action="set-theme"][data-value="light"]').getAttribute('aria-pressed'), 'true');
   await page.screenshot({ path: path.join(SHOTS, '20-settings-light.png') });
+  await goto(page, 'device');
+  await page.locator('.system-check').screenshot({ path: path.join(SHOTS, '24-system-check-light.png') });
   await page.reload();
   await page.waitForFunction(() => window.__companionReady === true, null, { timeout: 20000 });
   await page.waitForTimeout(600);
@@ -150,6 +152,17 @@ async function snap(page) {
   assert.match(await page.locator('h1').innerText(), /Read the tablet/i);
   assert.equal(await page.locator('.prop-table').count(), 1);
   await page.screenshot({ path: path.join(SHOTS, '04-device.png') });
+  let checkSnap = await snap(page);
+  assert.equal(checkSnap.systemChecks?.tools?.adb?.status, 'pass');
+  assert.equal(checkSnap.systemChecks?.tools?.fastboot?.status, 'pass');
+  assert.equal(checkSnap.systemChecks?.apps?.magisk?.installed, true);
+  assert.equal(checkSnap.systemChecks?.apps?.apatch?.installed, false);
+  await page.locator('[data-action="system-check"]').click();
+  await page.waitForTimeout(1000);
+  checkSnap = await snap(page);
+  assert.ok(checkSnap.systemChecks?.checkedAt);
+  await page.locator('.system-check').screenshot({ path: path.join(SHOTS, '23-system-check.png') });
+  pass('system check executes tools, Windows drivers, phone state and manager apps');
   pass('device passport renders model, OS, battery, props');
 
   await goto(page, 'unlock');
@@ -357,6 +370,12 @@ async function snap(page) {
   const deviceResult = await page.evaluate(() => window.companion.deviceAction('refresh'));
   assert.equal(deviceResult.ok, true, deviceResult.error);
   assert.ok(['no-device', 'no-adb', 'unauthorized'].includes(deviceResult.device?.state), JSON.stringify(deviceResult.device));
+  const liveCheck = await page.evaluate(() => window.companion.systemCheck());
+  assert.equal(liveCheck.ok, true, liveCheck.error);
+  assert.equal(liveCheck.systemChecks?.tools?.adb?.status, 'pass', JSON.stringify(liveCheck.systemChecks?.tools?.adb));
+  assert.equal(liveCheck.systemChecks?.tools?.fastboot?.status, 'pass', JSON.stringify(liveCheck.systemChecks?.tools?.fastboot));
+  assert.equal(liveCheck.systemChecks?.drivers?.supported, false);
+  pass('live system check executes real adb and fastboot on this Mac');
   pass('device refresh runs real adb without a tablet and reports no device');
 
   const ack = await page.evaluate(() => window.companion.ackWipe('WIPE', true));

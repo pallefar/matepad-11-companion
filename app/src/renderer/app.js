@@ -20,6 +20,7 @@ const state = {
   downloads: {},
   buildProgress: null,
   buildBusy: false,
+  checkRunning: false,
   consoleFilter: 'all',
   consoleQuery: '',
   autoscroll: true,
@@ -1076,6 +1077,9 @@ function gateLabel(id) {
     toolkit: t('prepare.toolkit'),
     toolpack: t('steps.toolpack'),
     model: t('device.model'),
+    'tool-adb': t('checks.adb'),
+    'tool-fastboot': t('checks.fastboot'),
+    'driver-problem': t('checks.problems'),
     os: t('device.harmony'),
     battery: t('device.battery'),
     disk: t('prepare.freeSpace'),
@@ -1112,6 +1116,12 @@ function localGateDetail(gate) {
       return snap.state.acknowledgements.unlockWipe ? fmtDate(snap.state.acknowledgements.unlockWipe) : t('unlock.ackText');
     case 'unlocked':
       return snap.readiness.unlocked ? t('device.unlocked') : t('unlock.notVerified');
+    case 'tool-adb':
+      return snap.systemChecks?.tools?.adb?.detail || t('checks.notRun');
+    case 'tool-fastboot':
+      return snap.systemChecks?.tools?.fastboot?.detail || t('checks.notRun');
+    case 'driver-problem':
+      return snap.systemChecks?.drivers?.detail || t('checks.noProblems');
     default:
       return gate.detail;
   }
@@ -1127,6 +1137,170 @@ function gateRows(gates) {
       </div>`,
     )
     .join('')}</div>`;
+}
+
+
+function statusTextCustom(status, label) {
+  const meta = statusMeta(status);
+  return `<span class="status" data-status="${esc(status)}"><span class="dot ${meta.tone === 'muted' ? '' : meta.tone}"></span>${esc(label)}</span>`;
+}
+
+function systemCheckRow(label, status, detail, value = '', statusLabel = '') {
+  return `<div class="check-row">
+    ${statusIcon(status)}
+    <div class="check-copy">
+      <div class="check-label">${esc(label)}${value ? ` <span class="mono dim">${esc(value)}</span>` : ''}</div>
+      ${detail ? `<div class="check-detail">${esc(detail)}</div>` : ''}
+    </div>
+    ${statusLabel ? statusTextCustom(status, statusLabel) : statusText(status)}
+  </div>`;
+}
+
+function systemCheckCard() {
+  const snap = state.snapshot;
+  const t = state.t;
+  const checks = snap.systemChecks;
+  const run = button(state.checkRunning ? t('checks.running') : t('checks.run'), 'system-check', {
+    tone: 'btn-ghost',
+    size: 'btn-sm',
+    iconName: 'search',
+    disabled: state.checkRunning,
+  });
+  if (!checks) {
+    return `<div class="card system-check">
+      ${cardTitle('shield', t('checks.title'), badge(t('checks.notRun'), 'warn'))}
+      <p class="small muted">${esc(t('checks.text'))}</p>
+      <div class="mt-12">${run}</div>
+    </div>`;
+  }
+  const summary = checks.summary || {};
+  const connected = checks.phone?.connection?.status === 'pass';
+  const tone = summary.status === 'blocked' ? 'bad' : summary.status === 'attention' ? 'warn' : 'good';
+  const summaryLabel =
+    summary.status === 'blocked' ? t('checks.blocked') : summary.status === 'attention' ? t('checks.attention') : t('checks.ready');
+  const displayLabel = connected
+    ? summaryLabel
+    : checks.phone?.connection?.status === 'fail'
+      ? t('checks.tabletNotReady')
+      : t('checks.noDevice');
+  const displayTone = connected ? tone : 'warn';
+  const counts = t('checks.counts', {
+    pass: summary.pass ?? 0,
+    pending: summary.pending ?? 0,
+    warn: summary.warn ?? 0,
+    unknown: summary.unknown ?? 0,
+  });
+  const tool = (key, label) => {
+    const item = checks.tools?.[key] || {};
+    const detail = [item.version, item.path].filter(Boolean).join(' · ') || item.detail || '';
+    const status = item.status || 'unknown';
+    const statusLabel = status === 'pass'
+      ? t('common.pass')
+      : status === 'fail'
+        ? t('common.fail')
+        : status === 'pending'
+          ? key === 'sevenZip'
+            ? t('checks.windowsOnlyTool')
+            : t('checks.noDevice')
+          : t('common.unknown');
+    return systemCheckRow(label, status, detail, '', statusLabel);
+  };
+  const driver = (key, label) => {
+    const item = checks.drivers?.[key] || {};
+    const status = item.status || 'unknown';
+    const statusLabel =
+      key === 'qualcomm'
+        ? status === 'pass'
+          ? t('checks.present')
+          : status === 'unknown'
+            ? t('checks.notInEdl')
+            : status === 'pending'
+              ? t('checks.noDevice')
+              : t('common.unknown')
+        : status === 'pass'
+          ? t('common.pass')
+          : status === 'warn'
+            ? t('checks.actionRequired')
+            : status === 'pending'
+              ? t('checks.noDevice')
+              : t('common.unknown');
+    return systemCheckRow(label, status, item.detail || item.name || '', '', statusLabel);
+  };
+  const phone = (key, label, statusLabel = '') => {
+    const item = checks.phone?.[key] || {};
+    return systemCheckRow(label, item.status || 'unknown', item.detail || '', '', statusLabel);
+  };
+  const phoneLabel = (key, status) => {
+    const connected = checks.phone?.connection?.status === 'pass';
+    if (!connected && ['usbDebug', 'bootloader', 'root'].includes(key)) return t('checks.noDevice');
+    if (key === 'connection') return status === 'pass' ? t('checks.connected') : t('checks.notConnected');
+    if (key === 'usbDebug') return status === 'pass' ? t('checks.authorized') : t('checks.notConnected');
+    if (key === 'developer' || key === 'adbEnabled') {
+      return status === 'pass' ? t('checks.enabled') : status === 'warn' ? t('checks.disabled') : t('common.unknown');
+    }
+    if (key === 'bootloader') {
+      return status === 'pass' ? t('checks.unlocked') : status === 'pending' ? t('checks.locked') : t('common.unknown');
+    }
+    if (key === 'root') {
+      return status === 'pass' ? t('checks.rooted') : status === 'pending' ? t('checks.notRooted') : t('common.unknown');
+    }
+    return '';
+  };
+  const app = (key, label) => {
+    const item = checks.apps?.[key] || {};
+    const detail = item.detail || (item.installed ? label : '');
+    const connected = checks.phone?.connection?.status === 'pass';
+    const statusLabel = !connected
+      ? t('checks.noDevice')
+      : key === 'su'
+        ? item.installed
+          ? t('checks.present')
+          : t('checks.absent')
+        : item.installed
+          ? t('checks.installed')
+          : t('checks.notInstalled');
+    return systemCheckRow(label, item.status || 'unknown', detail, '', statusLabel);
+  };
+  const problems = checks.drivers?.problems || [];
+  const problemRow = systemCheckRow(
+    t('checks.problems'),
+    problems.length ? 'warn' : 'pass',
+    problems.length ? problems.map((entry) => `${entry.name} (${entry.errorCode})`).join(', ') : t('checks.noProblems'),
+    '',
+    problems.length ? t('checks.warning') : t('common.pass'),
+  );
+  return `<div class="card system-check">
+    ${cardTitle('shield', t('checks.title'), `<div class="row" style="gap:8px">${badge(displayLabel, displayTone)}${run}</div>`)}
+    <p class="small muted">${esc(t('checks.text'))}</p>
+    <div class="system-check-meta"><span class="mono">${esc(t('checks.checked', { when: fmtDate(checks.checkedAt) }))}</span><span class="dim">${esc(counts)}</span></div>
+    <div class="check-grid">
+      <div class="check-group"><h3>${esc(t('checks.tools'))}</h3>
+        ${tool('adb', t('checks.adb'))}
+        ${tool('fastboot', t('checks.fastboot'))}
+        ${tool('sevenZip', t('checks.sevenZip'))}
+      </div>
+      <div class="check-group"><h3>${esc(t('checks.drivers'))}</h3>
+        ${driver('adb', t('checks.adbDriver'))}
+        ${driver('qualcomm', t('checks.qualcomm'))}
+        ${problemRow}
+      </div>
+      <div class="check-group"><h3>${esc(t('checks.phone'))}</h3>
+        ${phone('connection', t('checks.connection'), phoneLabel('connection', checks.phone?.connection?.status))}
+        ${phone('usbDebug', t('checks.usbDebug'), phoneLabel('usbDebug', checks.phone?.usbDebug?.status))}
+        ${phone('developer', t('checks.developer'), phoneLabel('developer', checks.phone?.developer?.status))}
+        ${phone('adbEnabled', t('checks.adbEnabled'), phoneLabel('adbEnabled', checks.phone?.adbEnabled?.status))}
+        ${phone('bootloader', t('checks.bootloader'), phoneLabel('bootloader', checks.phone?.bootloader?.status))}
+        ${phone('root', t('checks.root'), phoneLabel('root', checks.phone?.root?.status))}
+      </div>
+      <div class="check-group"><h3>${esc(t('checks.apps'))}</h3>
+        ${app('magisk', t('checks.magisk'))}
+        ${app('apatch', t('checks.apatch'))}
+        ${app('kernelsu', t('checks.kernelsu'))}
+        ${app('su', t('checks.su'))}
+      </div>
+    </div>
+    <div class="small dim mt-12">${esc(t('checks.hint'))}</div>
+  </div>`;
 }
 
 function deviceView() {
@@ -1184,6 +1358,7 @@ function deviceView() {
           </div>
           <div class="mt-16">${notice(esc(t('device.closeHisuite')), 'warn', 'alert')}</div>
         </div>
+        ${systemCheckCard()}
         ${edlCard}
         <div class="card">
           ${cardTitle('help', t('device.usbHelp'))}
@@ -1264,6 +1439,8 @@ function deviceView() {
         ${device.multiple ? `<div class="mt-12">${notice(esc(t('device.multiple')), 'warn', 'alert')}</div>` : ''}
       </div>
 
+      ${systemCheckCard()}
+
       <div class="card">
         ${cardTitle('settings', t('device.actions'))}
         <div class="actions-row">
@@ -1310,7 +1487,7 @@ function deviceView() {
     <aside class="side">
       <div class="card">
         ${cardTitle('shield', t('device.gatesTitle'))}
-        ${gateRows((snap.gates.gates || []).filter((gate) => ['model', 'os', 'battery', 'disk', 'backup', 'toolpack'].includes(gate.id)))}
+        ${gateRows((snap.gates.gates || []).filter((gate) => ['model', 'os', 'battery', 'disk', 'backup', 'toolpack', 'tool-adb', 'tool-fastboot', 'driver-problem'].includes(gate.id)))}
       </div>
       <div class="card">
         <details class="disclosure">
@@ -1884,6 +2061,18 @@ async function handleAction(action, element) {
     case 'refresh-device':
       await run(() => api.refreshDevice(), { success: state.t('toast.deviceRefreshed') });
       return;
+    case 'system-check': {
+      state.checkRunning = true;
+      render();
+      try {
+        await run(() => api.systemCheck(), { success: state.t('toast.checksDone') });
+      } finally {
+        state.checkRunning = false;
+      }
+      await refreshSnapshot();
+      render();
+      return;
+    }
     case 'detect-edl':
       await run(() => api.detectEdl(), { success: '' });
       return;

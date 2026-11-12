@@ -22,6 +22,7 @@ function createIpc({
   environment,
   inventoryService,
   deviceService,
+  checksService,
   edlService,
   downloadService,
   importService,
@@ -29,6 +30,7 @@ function createIpc({
   version,
 }) {
   let lastEdl = null;
+  let lastChecks = null;
   let lastBuildProgress = null;
   let activeDownloads = new Map();
   let bootstrapped = false;
@@ -84,7 +86,31 @@ function createIpc({
       toolkitReady: toolkitPresent,
       method: state.method,
     };
-    const gates = summarizeGates(evaluateGates(gateInput));
+    const checks = lastChecks || checksService.getCached();
+    const gateList = evaluateGates(gateInput);
+    if (checks?.tools) {
+      for (const [id, label] of [['adb', 'ADB command'], ['fastboot', 'Fastboot command']]) {
+        const tool = checks.tools[id];
+        if (!tool) continue;
+        gateList.push({
+          id: `tool-${id}`,
+          label,
+          status: tool.status === 'pass' ? 'pass' : 'fail',
+          detail: tool.detail || tool.path || label,
+          blocks: tool.status !== 'pass',
+        });
+      }
+    }
+    if (checks?.drivers?.problems?.length) {
+      gateList.push({
+        id: 'driver-problem',
+        label: 'Windows driver problem',
+        status: 'warn',
+        detail: `${checks.drivers.problems.length} related device(s) report a driver error.`,
+        blocks: false,
+      });
+    }
+    const gates = summarizeGates(gateList);
     const rootGateList = [
       ...gates.gates,
       {
@@ -130,6 +156,8 @@ function createIpc({
       inventoryGroups: groupItems(inventory.items),
       device,
       edl,
+      systemChecks: checks,
+      systemCheckRunning: checksService.isRunning(),
       fastboot: deviceService.getLastFastboot(),
       readiness: { ...readiness, canUnlock: readiness.canUnlock && gates.canProceed, canRoot: readiness.canRoot && rootGates.canProceed },
       gates,
@@ -180,6 +208,14 @@ function createIpc({
         logger.warn('app', `Startup device check failed: ${error.message}`);
       }
     }
+    try {
+      lastChecks = await checksService.runAll({
+        device: state.demo ? makeDemoDevice() : deviceService.getLastDevice(),
+        force: true,
+      });
+    } catch (error) {
+      logger.warn('checks', `System check failed: ${error.message}`);
+    }
     logger.info('app', `Workspace: ${state.workspace}`);
     logger.info('app', `Mode: ${state.demo ? 'demo preview' : 'live'} · root method: ${state.method}`);
     const snapshot = await broadcastSnapshot();
@@ -217,6 +253,14 @@ function createIpc({
       logger.info('demo', 'Demo preview enabled — no device commands or file writes will run.');
     } else {
       logger.info('demo', 'Demo preview disabled.');
+    }
+    try {
+      lastChecks = await checksService.runAll({
+        device: store.isDemo() ? makeDemoDevice() : deviceService.getLastDevice(),
+        force: true,
+      });
+    } catch (error) {
+      logger.warn('checks', `System check after demo toggle failed: ${error.message}`);
     }
     return { demo: store.isDemo() };
   });
@@ -365,13 +409,25 @@ function createIpc({
       await deviceService.refresh();
       if (process.platform === 'win32') lastEdl = await edlService.detect();
     }
+    lastChecks = await checksService.runAll({
+      device: state.demo ? makeDemoDevice() : deviceService.getLastDevice(),
+      force: true,
+    });
     const snapshot = await broadcastSnapshot();
     return { snapshot };
   });
 
   handle('app:refresh-device', async () => {
     const device = await deviceService.refresh();
-    return { device: sanitizeDevice(device) };
+    lastChecks = await checksService.runAll({ device, force: true });
+    return { device: sanitizeDevice(device), systemChecks: lastChecks };
+  });
+
+  handle('app:system-check', async () => {
+    const device = await deviceService.refresh();
+    lastChecks = await checksService.runAll({ device, force: true });
+    logger.info('checks', 'System check refreshed.');
+    return { device: sanitizeDevice(device), systemChecks: lastChecks };
   });
 
   handle('app:detect-edl', async () => {
@@ -454,12 +510,18 @@ function createIpc({
   handle('app:device-action', async ({ action, kind }) => {
     if (store.isDemo()) throw new Error('Demo mode: no device command was run.');
     switch (action) {
-      case 'refresh':
-        return { device: sanitizeDevice(await deviceService.refresh()) };
+      case 'refresh': {
+        const device = await deviceService.refresh();
+        lastChecks = await checksService.runAll({ device, force: true });
+        return { device: sanitizeDevice(device), systemChecks: lastChecks };
+      }
       case 'check-fastboot':
         return { fastboot: await deviceService.checkFastboot() };
-      case 'verify-root':
-        return { root: await deviceService.verifyRoot() };
+      case 'verify-root': {
+        const root = await deviceService.verifyRoot();
+        lastChecks = await checksService.runAll({ device: deviceService.getLastDevice(), force: true });
+        return { root, systemChecks: lastChecks };
+      }
       case 'reboot-bootloader':
         return { result: await deviceService.reboot('bootloader') };
       case 'reboot-system':
@@ -471,7 +533,9 @@ function createIpc({
           ? path.join(store.get().workspace, 'tools', 'apks', 'Magisk.apk')
           : path.join(store.get().workspace, 'tools', 'apks', 'Apatch.apk');
         if (!exists(apk)) throw new Error(`APK not found: ${apk}`);
-        return { result: await deviceService.installApk(apk) };
+        const installed = await deviceService.installApk(apk);
+        lastChecks = await checksService.runAll({ device: deviceService.getLastDevice(), force: true });
+        return { result: installed, systemChecks: lastChecks };
       }
       default:
         throw new Error(`Unknown device action: ${action}`);
@@ -556,6 +620,7 @@ function createIpc({
       store,
       deviceService,
       inventoryService,
+      systemChecks: lastChecks,
     });
     return result;
   });

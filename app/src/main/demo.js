@@ -1,5 +1,7 @@
 'use strict';
 
+const { summarizeStatuses, collectStatuses } = require('../core/checks');
+
 const { ITEMS, summarize } = require('../core/inventory');
 
 function demoBytes(rel) {
@@ -115,6 +117,13 @@ function makeDemoDevice() {
     storage: { freeBytes: 41.2 * 1024 ** 3, totalBytes: 128 * 1024 ** 3 },
     bootloader: { unlocked: false, source: 'props', verifiedBootState: 'green', flashLocked: '1' },
     rootVerified: false,
+    apps: {
+      magisk: { installed: true, package: 'com.topjohnwu.magisk', version: '31.1' },
+      apatch: { installed: false, package: null, version: null },
+      kernelsu: { installed: false, package: null, version: null },
+      su: { present: false, path: null },
+    },
+    developer: { settingsEnabled: true, adbEnabled: true },
     build: 'DBY-W09 3.0.0.168(C00E160R2P3)',
     securityPatch: '2022-08-01',
     detectedAt: new Date().toISOString(),
@@ -134,6 +143,58 @@ function makeDemoDevice() {
       'ro.build.version.security_patch': '2022-08-01',
     },
   };
+}
+
+
+function makeDemoChecks(device = makeDemoDevice()) {
+  const apps = device.apps || {};
+  const tools = {
+    adb: { label: 'adb', status: 'pass', path: 'C:\\MatePad11\\tools\\adb.exe', version: '1.0.41 (36.0.2)', detail: 'Android Debug Bridge version 1.0.41' },
+    fastboot: { label: 'fastboot', status: 'pass', path: 'C:\\MatePad11\\tools\\fastboot.exe', version: '36.0.2', detail: 'fastboot version 36.0.2' },
+    sevenZip: { label: '7-Zip', status: 'pass', path: 'C:\\MatePad11\\tools\\7z.exe', version: '23.01', detail: '7z.exe is present' },
+  };
+  const drivers = {
+    supported: true,
+    adb: { status: 'pass', present: true, name: 'HUAWEI ADB Interface', detail: 'HUAWEI ADB Interface' },
+    qualcomm: { status: 'unknown', present: false, name: null, detail: 'No Qualcomm 9008 port is present. This is normal unless the tablet is in EDL mode.' },
+    problems: [],
+    detail: '1 related Windows device found.',
+    deviceCount: 1,
+  };
+  const phone = {
+    connection: { status: 'pass', detail: `${device.serialMasked} · ${device.model}` },
+    usbDebug: { status: 'pass', detail: 'USB debugging is authorized and adb can read the device.' },
+    developer: { status: 'pass', detail: 'Developer options are enabled.' },
+    adbEnabled: { status: 'pass', detail: 'USB debugging setting is on.' },
+    bootloader: { status: 'pending', detail: 'Bootloader is locked (expected before unlock).' },
+    root: { status: 'pending', detail: 'No su binary found; the tablet is not rooted yet.' },
+  };
+  const appRows = {
+    magisk: {
+      status: apps.magisk?.installed ? 'pass' : 'pending',
+      installed: Boolean(apps.magisk?.installed),
+      package: apps.magisk?.package || null,
+      version: apps.magisk?.version || null,
+      detail: apps.magisk?.installed ? `Magisk manager installed · v${apps.magisk.version}` : 'Magisk manager is not installed on the tablet.',
+    },
+    apatch: {
+      status: apps.apatch?.installed ? 'pass' : 'pending',
+      installed: Boolean(apps.apatch?.installed),
+      package: apps.apatch?.package || null,
+      version: apps.apatch?.version || null,
+      detail: apps.apatch?.installed ? 'APatch manager installed' : 'APatch manager is not installed on the tablet.',
+    },
+    kernelsu: {
+      status: apps.kernelsu?.installed ? 'pass' : 'pending',
+      installed: Boolean(apps.kernelsu?.installed),
+      package: apps.kernelsu?.package || null,
+      version: apps.kernelsu?.version || null,
+      detail: apps.kernelsu?.installed ? 'KernelSU manager installed' : 'KernelSU manager is not installed on the tablet.',
+    },
+    su: { status: 'pending', installed: false, path: null, detail: 'No su binary found on the tablet.' },
+  };
+  const summary = summarizeStatuses(collectStatuses({ tools, drivers, phone, apps: appRows }));
+  return { checkedAt: new Date().toISOString(), tools, drivers, phone, apps: appRows, summary };
 }
 
 function makeDemoLogs(now = new Date()) {
@@ -191,6 +252,7 @@ function makeDemoState(base) {
 }
 
 module.exports = {
+  makeDemoChecks,
   makeDemoInventory,
   makeDemoEnvironment,
   makeDemoDevice,

@@ -13,6 +13,13 @@ const {
 } = require('../core/parse');
 const { maskSerial } = require('../core/commands');
 const { makeDemoDevice } = require('./demo');
+const {
+  parsePackageList,
+  findManagerApps,
+  parseVersionName,
+  parseSetting,
+  parseWhichSu,
+} = require('../core/checks');
 
 const PROP_KEYS = [
   'ro.product.model',
@@ -137,14 +144,20 @@ function createDeviceService({ store, logger, environment }) {
           detectedAt: new Date().toISOString(),
           props: {},
           os: { major: null, version: null },
+          apps: { magisk: { installed: false }, apatch: { installed: false }, kernelsu: { installed: false }, su: { present: false } },
+          developer: { settingsEnabled: null, adbEnabled: null },
         };
         return lastDevice;
       }
 
-      const [propResult, batteryResult, dfResult] = await Promise.all([
+      const [propResult, batteryResult, dfResult, pmResult, devResult, adbSettingResult, suResult] = await Promise.all([
         deviceAdb(serial, ['shell', 'getprop'], { timeoutMs: 15000 }),
         deviceAdb(serial, ['shell', 'dumpsys', 'battery'], { timeoutMs: 10000 }),
         deviceAdb(serial, ['shell', 'df', '-k', '/data'], { timeoutMs: 10000 }),
+        deviceAdb(serial, ['shell', 'pm', 'list', 'packages'], { timeoutMs: 15000 }),
+        deviceAdb(serial, ['shell', 'settings', 'get', 'global', 'development_settings_enabled'], { timeoutMs: 8000 }),
+        deviceAdb(serial, ['shell', 'settings', 'get', 'global', 'adb_enabled'], { timeoutMs: 8000 }),
+        deviceAdb(serial, ['shell', 'which', 'su'], { timeoutMs: 8000 }),
       ]);
       const props = parseGetprop(propResult.combined);
       const os = detectHarmonyOS(props);
@@ -152,6 +165,26 @@ function createDeviceService({ store, logger, environment }) {
       const storage = parseDf(dfResult.combined);
       const model = props['ro.product.model'] || chosen.props.model || null;
       const bootloader = inferBootloader(props);
+      const packages = parsePackageList(pmResult.combined);
+      const managers = findManagerApps(packages);
+      const installedManagers = ['magisk', 'apatch', 'kernelsu']
+        .map((key) => managers[key])
+        .filter((manager) => manager.installed);
+      await Promise.all(installedManagers.map(async (manager) => {
+        const dump = await deviceAdb(serial, ['shell', 'dumpsys', 'package', manager.package], { timeoutMs: 8000 });
+        manager.version = parseVersionName(dump.combined);
+      }));
+      const suPath = parseWhichSu(suResult.combined);
+      const apps = {
+        magisk: managers.magisk,
+        apatch: managers.apatch,
+        kernelsu: managers.kernelsu,
+        su: { present: Boolean(suPath), path: suPath },
+      };
+      const developer = {
+        settingsEnabled: parseSetting(devResult.combined),
+        adbEnabled: parseSetting(adbSettingResult.combined),
+      };
       const profile = {
         connected: true,
         state: 'device',
@@ -165,6 +198,8 @@ function createDeviceService({ store, logger, environment }) {
         storage,
         bootloader,
         rootVerified: null,
+        apps,
+        developer,
         build: props['ro.build.display.id'] || null,
         securityPatch: props['ro.build.version.security_patch'] || null,
         detectedAt: new Date().toISOString(),
@@ -182,6 +217,11 @@ function createDeviceService({ store, logger, environment }) {
       } else if (kind === 'global') {
         logger.warn('device', 'DBY-W09S is the global name of the same hardware, but the toolkit lists DBY-W09 only.');
       }
+      const installedLabels = ['magisk', 'apatch', 'kernelsu'].filter((key) => apps[key].installed);
+      logger.info(
+        'device',
+        `Manager apps: ${installedLabels.length ? installedLabels.join(', ') : 'none'}${suPath ? ` · su at ${suPath}` : ' · no su'}`,
+      );
       if (bootloader.unlocked === true) logger.info('device', 'Bootloader reported unlocked by ro.boot properties.');
       if (bootloader.unlocked === false) logger.info('device', 'Bootloader reported locked by ro.boot properties.');
       return profile;

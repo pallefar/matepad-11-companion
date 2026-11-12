@@ -18,6 +18,7 @@ This companion adds the missing layer:
 - **Guide** — step ledgers with expected outputs and troubleshooting, for both the ADB and engineering-cable branches, APatch and Magisk root.
 - **Record** — persistent progress, live console, diagnostics export with the serial masked.
 - **Dark or light** — a persisted theme toggle in the top bar and **Settings → Appearance**. Both themes are screenshot-verified.
+- **System check** — actually runs `adb`/`fastboot`, checks the Windows ADB and Qualcomm 9008 drivers, reads developer options / USB debugging / bootloader / root state, and lists Magisk, APatch, KernelSU and `su` on the tablet.
 
 ## What it deliberately does not do
 
@@ -30,7 +31,7 @@ This companion adds the missing layer:
 
 | Area | State |
 |---|---|
-| UI and logic | **Verified on macOS**: 39 unit tests, 27 Playwright checks against the real Electron app, EN + 中文, 1440/1120 widths, zero renderer errors |
+| UI and logic | **Verified on macOS**: 44 unit tests, 29 Playwright checks against the real Electron app, EN + 中文, 1440/1120 widths, zero renderer errors |
 | Official downloads | **Verified live**: platform-tools, 7-Zip, KernelPatch (kptools + kpimg), Magisk release, safe ZIP extraction |
 | External pack fetch | **Verified live**: signed firehose + ABL (hashes match the independent guide), QSaharaServer, fh_loader 23.06, signed Xiaomi driver installer; all five entries hash-checked |
 | Ready workspace | **Verified**: 25 files, APatch 10/10, driver entries present, manifest/checksums match; app reads it as ready |
@@ -97,6 +98,7 @@ Both require an unlocked bootloader. Both have a switch-method control; prerequi
 | ![Unlock](docs/img/unlock.jpg) | ![Root](docs/img/root.jpg) |
 | ![Device](docs/img/device.jpg) | ![Console](docs/img/console.jpg) |
 | ![Light overview](docs/img/overview-light.jpg) | ![Light tool pack](docs/img/tools-light.jpg) |
+| ![System check](docs/img/system-check.jpg) | ![System check light](docs/img/system-check-light.jpg) |
 
 ## Safety
 
@@ -123,8 +125,8 @@ cd app
 npm install
 npm start            # real state (macOS/Linux preview; Windows for the full path)
 npm run demo         # simulated DBY-W09, no device commands
-npm test             # 39 node:test checks
-node scripts/e2e.mjs # 27 Playwright checks against the real Electron app
+npm test             # 44 node:test checks
+node scripts/e2e.mjs # 29 Playwright checks against the real Electron app
 npm run pack:win     # win32-x64 folder in ../dist
 ```
 

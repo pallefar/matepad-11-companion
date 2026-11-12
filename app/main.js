@@ -8,6 +8,7 @@ const { Logger } = require('./src/main/log');
 const { createEnvironmentService } = require('./src/main/environment');
 const { createInventoryService } = require('./src/main/inventory-service');
 const { createDeviceService } = require('./src/main/device');
+const { createChecksService } = require('./src/main/checks');
 const { createEdlService } = require('./src/main/edl');
 const { createDownloadService } = require('./src/main/downloads');
 const { createImportService } = require('./src/main/importer');
@@ -215,6 +216,7 @@ app.whenReady().then(async () => {
   const environment = createEnvironmentService({ store, logger });
   const inventoryService = createInventoryService({ store, logger });
   const deviceService = createDeviceService({ store, logger, environment });
+  const checksService = createChecksService({ store, logger, environment });
   const edlService = createEdlService({ store, logger });
   const downloadService = createDownloadService({ store, logger });
   const importService = createImportService({ store, logger });
@@ -228,13 +230,14 @@ app.whenReady().then(async () => {
     environment,
     inventoryService,
     deviceService,
+    checksService,
     edlService,
     downloadService,
     importService,
     builderService,
     version: VERSION,
   });
-  services = { store, logger, environment, inventoryService, deviceService, edlService, downloadService, importService, builderService, ipc };
+  services = { store, logger, environment, inventoryService, deviceService, checksService, edlService, downloadService, importService, builderService, ipc };
   seedDemoLogsIfNeeded(store, logger);
   logger.info('app', `${APP_NAME} ${VERSION} starting on ${process.platform}`);
 
