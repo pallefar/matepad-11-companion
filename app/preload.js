@@ -17,6 +17,7 @@ const api = {
   snapshot: () => invoke('app:snapshot'),
   bootstrap: () => invoke('app:bootstrap'),
   setLanguage: (language) => invoke('app:set-language', { language }),
+  setTheme: (theme) => invoke('app:set-theme', { theme }),
   setDemo: (enabled) => invoke('app:set-demo', { enabled }),
   setMethod: (method) => invoke('app:set-method', { method }),
   chooseWorkspace: () => invoke('app:set-workspace'),

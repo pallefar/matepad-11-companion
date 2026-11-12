@@ -97,7 +97,35 @@ async function snap(page) {
   assert.equal(initial.device.model, 'DBY-W09');
   pass('demo boot: 6 checks, 4 ready, APatch files complete');
 
+  assert.equal(await page.locator('html').getAttribute('data-theme'), 'dark');
   await page.screenshot({ path: path.join(SHOTS, '01-overview.png') });
+
+  await page.locator('[data-action="toggle-theme"]').click();
+  await page.waitForTimeout(600);
+  assert.equal(await page.locator('html').getAttribute('data-theme'), 'light');
+  const lightTheme = await page.evaluate(() => ({
+    theme: window.companion && document.documentElement.dataset.theme,
+    bg: getComputedStyle(document.body).backgroundColor,
+  }));
+  assert.equal(lightTheme.theme, 'light');
+  assert.equal(lightTheme.bg, 'rgb(244, 241, 234)');
+  await page.screenshot({ path: path.join(SHOTS, '17-overview-light.png') });
+  await goto(page, 'tools');
+  await page.screenshot({ path: path.join(SHOTS, '18-tools-light.png') });
+  await goto(page, 'settings');
+  assert.equal(await page.locator('#view [data-action="set-theme"][data-value="light"]').getAttribute('aria-pressed'), 'true');
+  await page.screenshot({ path: path.join(SHOTS, '20-settings-light.png') });
+  await page.reload();
+  await page.waitForFunction(() => window.__companionReady === true, null, { timeout: 20000 });
+  await page.waitForTimeout(600);
+  assert.equal(await page.locator('html').getAttribute('data-theme'), 'light');
+  assert.equal((await snap(page)).state.theme, 'light');
+  await page.locator('[data-action="toggle-theme"]').click();
+  await page.waitForTimeout(600);
+  assert.equal(await page.locator('html').getAttribute('data-theme'), 'dark');
+  assert.equal((await snap(page)).state.theme, 'dark');
+  pass('light mode toggle, persistence across reload, and dark restoration');
+
   await goto(page, 'prepare');
   assert.match(await page.locator('h1').innerText(), /Build the toolkit/i);
   await page.screenshot({ path: path.join(SHOTS, '02-prepare.png') });

@@ -2,7 +2,7 @@
 
 const path = require('node:path');
 const fs = require('node:fs');
-const { BrowserWindow, shell } = require('electron');
+const { BrowserWindow, shell, nativeTheme } = require('electron');
 const { computeReadiness } = require('../core/readiness');
 const { evaluateGates, summarizeGates, routeUnlock } = require('../core/parse');
 const { groupItems, ITEM_BY_ID } = require('../core/inventory');
@@ -118,6 +118,7 @@ function createIpc({
         toolkitMode: state.toolkitMode,
         toolkitPath: state.toolkitPath,
         method: state.method,
+        theme: state.theme || 'dark',
         demo: Boolean(state.demo),
         acknowledgements: state.acknowledgements,
         progress: state.progress,
@@ -218,6 +219,23 @@ function createIpc({
       logger.info('demo', 'Demo preview disabled.');
     }
     return { demo: store.isDemo() };
+  });
+
+  handle('app:set-theme', ({ theme }) => {
+    const next = store.setTheme(theme);
+    nativeTheme.themeSource = next;
+    const background = next === 'light' ? '#F4F1EA' : '#0B0C0F';
+    for (const win of BrowserWindow.getAllWindows()) {
+      if (!win.isDestroyed()) {
+        try {
+          win.setBackgroundColor(background);
+        } catch {
+          /* Window background is cosmetic */
+        }
+      }
+    }
+    logger.info('settings', `Theme: ${next}`);
+    return { theme: next };
   });
 
   handle('app:set-method', ({ method }) => {

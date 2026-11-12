@@ -8,7 +8,7 @@ Proprietary tool pack: **none** (a synthetic pack was used)
 
 This file records what actually ran. It is deliberately narrower than “the app works on Windows”.
 
-## Automated unit tests — 37 passed
+## Automated unit tests — 39 passed
 
 Command: `cd app && npm test`
 
@@ -21,12 +21,12 @@ Coverage:
 - Inventory: canonical paths, required sets (APatch 10, Magisk 9), safe path joining, import name matching.
 - ZIP traversal rejection and safe extraction.
 - Importer: mixed folder → canonical layout, arbitrary ramdisk `.img`, demo refusal.
-- State: demo overlay does not overwrite real settings, language/progress reload, reset semantics.
+- State: demo overlay does not overwrite real settings, language/progress/theme reload, reset semantics; theme validation and demo/real preference synchronization.
 - EDL PowerShell JSON parsing (object/array/prefixed/BOM-less), COM extraction.
 
-Result: **37 pass, 0 fail**. All renderer translation keys used literally are present in both `en` and `zh` (363 literal keys checked; dynamic keys spot-checked).
+Result: **39 pass, 0 fail**. All renderer translation keys used literally are present in both `en` and `zh` (369 literal keys checked; dynamic keys spot-checked).
 
-## End-to-end — 26 checks passed
+## End-to-end — 27 checks passed
 
 Command: `cd app && node scripts/e2e.mjs` (Playwright launches the real Electron app).
 
@@ -61,8 +61,9 @@ Live workspace profile (macOS):
 24. First-run disclaimer gates the app, requires the checkbox, persists, and does not reopen after reload.
 25. Typed `WIPE` + backup checkbox records the acknowledgement and updates the UI.
 26. **Ready workspace** (25 files) loaded by the app: APatch 10/10, drivers present, external pack 5/5, manifest and tool files validated.
+27. Light mode: topbar toggle applies light tokens (body `rgb(244, 241, 234)`), persists across reload, restores dark; Appearance control and no-overflow checks pass.
 
-Result: **26 pass, 0 fail, zero console errors, zero page errors.**
+Result: **27 pass, 0 fail, zero console errors, zero page errors.**
 
 ## Download endpoints actually exercised
 
@@ -113,6 +114,7 @@ Screenshots (real Electron render, Playwright):
 - `app/screens/e2e/08-settings-zh.png`
 - `app/screens/e2e/09-overview-narrow.png`
 - `app/screens/e2e/13-disclaimer.png`
+- `17-overview-light.png`, `18-tools-light.png`, `19-unlock-light.png`, `20-settings-light.png`, `21-console-light.png`, `22-modal-light.png`
 - `app/screens/e2e/15-tools-ready-workspace.png`, `16-prepare-ready-workspace.png`
 
 The E2E summary JSON (check list + zero errors) is written under the OS temp directory for each run, not committed.

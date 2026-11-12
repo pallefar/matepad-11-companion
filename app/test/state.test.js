@@ -86,3 +86,39 @@ test('resetProgress clears guide state and the wipe acknowledgement only', () =>
     env.cleanup();
   }
 });
+
+test('theme defaults to dark, validates input, and persists across reload', () => {
+  const env = tempEnv();
+  fs.mkdirSync(env.userData, { recursive: true });
+  fs.mkdirSync(env.home, { recursive: true });
+  try {
+    const store = createStore({ userData: env.userData, home: env.home, locale: 'en' });
+    assert.equal(store.get().theme, 'dark');
+    assert.equal(store.setTheme('light'), 'light');
+    assert.equal(store.get().theme, 'light');
+    const reloaded = createStore({ userData: env.userData, home: env.home, locale: 'en' });
+    assert.equal(reloaded.get().theme, 'light');
+    assert.equal(reloaded.setTheme('sepia'), 'dark');
+    assert.equal(reloaded.get().theme, 'dark');
+  } finally {
+    env.cleanup();
+  }
+});
+
+test('theme changes while demo is enabled update the real preference too', () => {
+  const env = tempEnv();
+  fs.mkdirSync(env.userData, { recursive: true });
+  fs.mkdirSync(env.home, { recursive: true });
+  try {
+    const store = createStore({ userData: env.userData, home: env.home, locale: 'en' });
+    store.setTheme('light');
+    store.setDemo(true);
+    assert.equal(store.get().theme, 'light');
+    store.setTheme('dark');
+    assert.equal(store.get().theme, 'dark');
+    store.setDemo(false);
+    assert.equal(store.get().theme, 'dark');
+  } finally {
+    env.cleanup();
+  }
+});

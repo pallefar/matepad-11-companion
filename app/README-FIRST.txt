@@ -7,6 +7,8 @@ MatePad 11 Companion 1.0.0 — Windows x64
    unsigned, so Windows does not know the publisher.
 3. Prepare -> Download & build. The app installs .NET 8 locally if needed and
    builds the upstream GPL toolkit. First build: 5-15 minutes.
+   The sun/moon icon in the top bar switches light/dark mode; the choice is
+   remembered locally. Settings -> Appearance has the same control.
 4. Tool pack. Two options:
    a) Use the supplied "MatePad-11-Workspace-1.0.0.zip". Extract it, and in
       Prepare select its MatePad11 folder as the workspace. The tool pack is

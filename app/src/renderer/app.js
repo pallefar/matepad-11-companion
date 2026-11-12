@@ -322,12 +322,24 @@ function renderShellBase() {
   setupDropzone();
 }
 
+function applyTheme(theme) {
+  const next = theme === 'light' ? 'light' : 'dark';
+  document.documentElement.dataset.theme = next;
+  document.documentElement.style.colorScheme = next;
+  try {
+    localStorage.setItem('matepad-theme', next);
+  } catch {
+    /* storage can be unavailable; the in-memory state still applies */
+  }
+}
+
 function render({ preserveScroll = true, focus = false } = {}) {
   if (!state.snapshot || !state.shellReady) return;
   const snap = state.snapshot;
   state.lang = snap.state.language || 'en';
   state.t = makeT(state.lang);
   document.documentElement.lang = state.lang === 'zh' ? 'zh-CN' : 'en';
+  applyTheme(snap.state.theme || 'dark');
   const scroller = $('#scroller');
   const prevTop = scroller?.scrollTop || 0;
   renderChrome();
@@ -432,7 +444,12 @@ function renderChrome() {
     </button>
     ${demo ? `<span class="chip is-demo">${icon('eye')}${esc(t('topbar.demo'))}</span>` : ''}
     ${deviceChip}
-    <button class="icon-btn" data-nav="console" title="${esc(t('topbar.console'))}">${icon('console')}</button>`;
+    <button class="icon-btn" data-action="toggle-theme" title="${esc(
+      snap.state.theme === 'light' ? t('topbar.themeDark') : t('topbar.themeLight'),
+    )}" aria-label="${esc(snap.state.theme === 'light' ? t('topbar.themeDark') : t('topbar.themeLight'))}">${icon(
+      snap.state.theme === 'light' ? 'moon' : 'sun',
+    )}</button>
+    <button class="icon-btn" data-nav="console" title="${esc(t('topbar.console'))}" aria-label="${esc(t('topbar.console'))}">${icon('console')}</button>`;
 
   $('#demo-strip').innerHTML = demo
     ? `<div class="demo-strip"><strong>${esc(t('topbar.demo'))}</strong><span>${esc(
@@ -626,7 +643,7 @@ function overviewView() {
 
     ${demoCard ? `<section class="section">${demoCard}</section>` : ''}
 
-    <section class="section card flat" style="border-color:#1c2027">
+    <section class="section card flat" style="border-color:var(--line-soft)">
       <div class="row" style="align-items:flex-start">
         <span class="status-icon" data-status="pending">${icon('shield')}</span>
         <div class="grow"><div class="small" style="font-weight:600">${esc(t('overview.footer'))}</div>
@@ -698,7 +715,7 @@ function prepareView() {
               ${button(t('prepare.cancelBuild'), 'cancel-build', { tone: 'btn-danger', size: 'btn-sm', iconName: 'stop' })}
               <span class="small dim">${esc(progress?.command || '')}</span>
             </div>
-            <div class="console" data-build-log style="height:180px;border:1px solid #22262e;border-radius:8px;background:#0a0c0f;margin-top:10px">${buildLogs
+            <div class="console" data-build-log style="height:180px;border:1px solid var(--line);border-radius:8px;background:var(--console-bg);margin-top:10px">${buildLogs
               .map((entry) => logRow(entry))
               .join('')}</div>
           </div>`
@@ -715,7 +732,7 @@ function prepareView() {
       buildLogs.length && !buildRunning
         ? `<details class="disclosure mt-16">
             <summary>${esc(t('prepare.buildLog'))} · ${buildLogs.length}</summary>
-            <div class="disclosure-body"><div class="console" style="height:220px;border:1px solid #22262e;border-radius:8px;background:#0a0c0f" data-build-log>${buildLogs
+            <div class="disclosure-body"><div class="console" style="height:220px;border:1px solid var(--line);border-radius:8px;background:var(--console-bg)" data-build-log>${buildLogs
               .map((entry) => logRow(entry))
               .join('')}</div></div>
           </details>`
@@ -730,7 +747,7 @@ function prepareView() {
   </div>`;
 
   const readyCard = toolkitPresent
-    ? `<div class="card" style="border-color:rgba(66,211,155,.28)">
+    ? `<div class="card" style="border-color:var(--good-line)">
         <div class="card-head"><div class="card-title" style="color:var(--good)">${icon('check')}${esc(t('prepare.toolkitReady'))}</div>${badge('EXE', 'good')}</div>
         <div class="path-text">${esc(env.toolkit.exe || env.toolkit.path)}</div>
         <div class="row mt-12" style="gap:8px;flex-wrap:wrap">
@@ -1368,7 +1385,7 @@ function unlockView() {
         <div class="ack-note mt-8">${esc(t('unlock.wipePhrase'))}</div>
       </div>`;
 
-  const routePanel = `<div class="card" style="border-color:${route?.route === 'engineering' ? 'rgba(255,194,75,.25)' : 'var(--line)'}">
+  const routePanel = `<div class="card" style="border-color:${route?.route === 'engineering' ? 'var(--warn-line)' : 'var(--line)'}">
     ${cardTitle(
       'unlock',
       t('unlock.routeTitle'),
@@ -1685,6 +1702,16 @@ function settingsView() {
   <div class="settings-grid mt-28">
     <div class="stack-18">
       <div class="card">
+        ${cardTitle('sun', t('settings.appearance'))}
+        <div class="setting-row">
+          <div><div class="label">${esc(t('settings.appearance'))}</div><div class="sub">${esc(t('settings.appearanceText'))}</div></div>
+          <div class="control btn-group">
+            <button class="segment ${snap.state.theme !== 'light' ? 'is-active' : ''}" aria-pressed="${snap.state.theme !== 'light'}" data-action="set-theme" data-value="dark">${esc(t('settings.themeDark'))}</button>
+            <button class="segment ${snap.state.theme === 'light' ? 'is-active' : ''}" aria-pressed="${snap.state.theme === 'light'}" data-action="set-theme" data-value="light">${esc(t('settings.themeLight'))}</button>
+          </div>
+        </div>
+      </div>
+      <div class="card">
         ${cardTitle('settings', t('settings.language'))}
         <div class="setting-row">
           <div><div class="label">${esc(t('settings.language'))}</div><div class="sub">${esc(t('settings.languageText'))}</div></div>
@@ -1823,6 +1850,22 @@ async function handleAction(action, element) {
   const snap = state.snapshot;
   const value = element.dataset.value;
   switch (action) {
+    case 'set-theme': {
+      if (!['dark', 'light'].includes(value)) return;
+      applyTheme(value);
+      await run(() => api.setTheme(value));
+      await refreshSnapshot();
+      render();
+      return;
+    }
+    case 'toggle-theme': {
+      const next = state.snapshot.state.theme === 'light' ? 'dark' : 'light';
+      applyTheme(next);
+      await run(() => api.setTheme(next));
+      await refreshSnapshot();
+      render();
+      return;
+    }
     case 'set-language':
       await run(() => api.setLanguage(value), { success: state.t('settings.languageChanged') });
       return;

@@ -2,7 +2,7 @@
 
 const path = require('node:path');
 const fs = require('node:fs');
-const { app, BrowserWindow, Menu, ipcMain, dialog, shell } = require('electron');
+const { app, BrowserWindow, Menu, ipcMain, dialog, shell, nativeTheme } = require('electron');
 const { createStore } = require('./src/main/state');
 const { Logger } = require('./src/main/log');
 const { createEnvironmentService } = require('./src/main/environment');
@@ -112,7 +112,7 @@ function createWindow() {
     minWidth: 1040,
     minHeight: 700,
     show: false,
-    backgroundColor: '#0B0C0F',
+    backgroundColor: nativeTheme.shouldUseDarkColors ? '#0B0C0F' : '#F4F1EA',
     title: APP_NAME,
     autoHideMenuBar: true,
     webPreferences: {
@@ -207,6 +207,7 @@ app.whenReady().then(async () => {
   const store = createStore({ userData, home: app.getPath('home'), locale: app.getLocale() });
   if (args.demo && !store.isDemo()) store.setDemo(true);
   if (args.lang && ['en', 'zh'].includes(args.lang)) store.setLanguage(args.lang);
+  nativeTheme.themeSource = store.get().theme === 'light' ? 'light' : 'dark';
 
   const logger = new Logger({ version: VERSION });
   logger.attachFile(path.join(userData, 'logs'));

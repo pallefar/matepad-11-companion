@@ -16,6 +16,7 @@ function defaultState({ home, locale = 'en' }) {
     toolkitMode: 'build',
     toolkitPath: null,
     method: 'apatch',
+    theme: 'dark',
     demo: false,
     acknowledgements: {
       disclaimer: null,
@@ -54,6 +55,7 @@ function mergeState(defaults, loaded) {
   if (!['build', 'existing'].includes(merged.toolkitMode)) merged.toolkitMode = 'build';
   if (!['apatch', 'magisk'].includes(merged.method)) merged.method = 'apatch';
   if (!['en', 'zh'].includes(merged.language)) merged.language = 'en';
+  if (!['dark', 'light'].includes(merged.theme)) merged.theme = 'dark';
   return merged;
 }
 
@@ -71,7 +73,10 @@ function createStore({ userData, home, locale }) {
   let real = mergeState(defaults, loaded);
   let demoEnabled = Boolean(loaded?.demoEnabled);
   let demoState = makeDemoState(defaultState({ home, locale }));
-  if (demoEnabled) demoState.language = real.language;
+  if (demoEnabled) {
+    demoState.language = real.language;
+    demoState.theme = real.theme;
+  }
   let lastSaveError = null;
 
   function active() {
@@ -128,10 +133,20 @@ function createStore({ userData, home, locale }) {
       save();
       return next;
     },
+    setTheme(theme) {
+      const next = theme === 'light' ? 'light' : 'dark';
+      real.theme = next;
+      demoState.theme = next;
+      save();
+      return next;
+    },
     setDemo(enabled) {
       demoEnabled = Boolean(enabled);
       if (demoEnabled) demoState = makeDemoState(defaultState({ home, locale }));
-      if (demoEnabled) demoState.language = real.language;
+      if (demoEnabled) {
+        demoState.language = real.language;
+        demoState.theme = real.theme;
+      }
       save();
       return demoEnabled;
     },
