@@ -140,6 +140,16 @@ test('gates block a low battery, a non-DBY model and a missing backup acknowledg
   const noAck = summarizeGates(evaluateGates({ ...base, device: { ...base.device, battery: { level: 76 } }, backupAck: false }));
   assert.equal(noAck.canProceed, false);
 
+  const noBackup = summarizeGates(
+    evaluateGates({ ...base, device: { ...base.device, battery: { level: 76 } }, backupVerified: false }),
+  );
+  assert.equal(noBackup.canProceed, false);
+  assert.ok(noBackup.blocking.some((g) => g.id === 'backup-files'));
+  const withBackup = summarizeGates(
+    evaluateGates({ ...base, device: { ...base.device, battery: { level: 76 } }, backupVerified: true }),
+  );
+  assert.equal(withBackup.canProceed, true);
+
   const wrongModel = summarizeGates(
     evaluateGates({ ...base, device: { ...base.device, battery: { level: 76 }, model: 'DBY2-W09' } }),
   );

@@ -110,6 +110,10 @@ async function snap(page) {
   await page.locator('[data-action="copy-support"]').click();
   await page.waitForTimeout(300);
   assert.match(await page.locator('.toast').last().innerText(), /Support summary copied/i);
+  const copiedSummary = await page.evaluate(() => navigator.clipboard.readText());
+  assert.match(copiedSummary, /Host: macOS/i);
+  assert.match(copiedSummary, /Simulated PC: Windows 11 24H2/i);
+  assert.match(copiedSummary, /no device commands were run/i);
   pass('guided setup shows one current step, eight ordered steps and support actions');
   pass('step help opens with What you should see and Common fixes');
   pass('copy support summary action succeeds');
@@ -296,6 +300,21 @@ async function snap(page) {
   assert.equal(await macLink.count(), 1);
   await page.screenshot({ path: path.join(SHOTS, '27-mac-card.png') });
   pass('macOS compatibility card renders and links to MACOS.md');
+
+  const backupDir = path.join(BASE, 'backup-e2e');
+  fs.mkdirSync(backupDir, { recursive: true });
+  for (const [name, bytes] of [['system.img', 200], ['boot.img', 200], ['super.img', 200]]) {
+    const fd = fs.openSync(path.join(backupDir, name), 'w');
+    fs.ftruncateSync(fd, bytes * 1024 ** 2);
+    fs.closeSync(fd);
+  }
+  fs.writeFileSync(path.join(backupDir, 'gpt_main0.xml'), '<gpt/>');
+  const backupResult = await page.evaluate((dir) => window.companion.recordBackup(dir), backupDir);
+  assert.equal(backupResult.ok, true, backupResult.error);
+  realSnap = await snap(page);
+  assert.equal(realSnap.state.acknowledgements.backup.confirmed, true);
+  assert.equal(realSnap.gates.gates.find((gate) => gate.id === 'backup-files')?.status, 'pass');
+  pass('EDL backup folder scanner records evidence and unlocks the backup gate');
 
   await goto(page, 'prepare');
   const buildButton = page.locator('#view [data-action="build"]');

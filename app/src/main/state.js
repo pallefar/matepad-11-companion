@@ -21,6 +21,7 @@ function defaultState({ home, locale = 'en' }) {
     acknowledgements: {
       disclaimer: null,
       unlockWipe: null,
+      backup: null,
     },
     progress: {
       unlock: { steps: {} },
@@ -133,6 +134,21 @@ function createStore({ userData, home, locale }) {
       save();
       return next;
     },
+    acknowledgeBackup(record) {
+      if (!record || typeof record !== 'object' || !record.path) throw new Error('Missing backup folder.');
+      const next = {
+        path: String(record.path),
+        imageCount: Number(record.imageCount) || 0,
+        gptCount: Number(record.gptCount) || 0,
+        totalBytes: Number(record.totalBytes) || 0,
+        checkedAt: record.checkedAt || new Date().toISOString(),
+        confirmedAt: new Date().toISOString(),
+        confirmed: true,
+      };
+      active().acknowledgements.backup = next;
+      save();
+      return next;
+    },
     setTheme(theme) {
       const next = theme === 'light' ? 'light' : 'dark';
       real.theme = next;
@@ -153,6 +169,7 @@ function createStore({ userData, home, locale }) {
     resetProgress() {
       active().progress = { unlock: { steps: {} }, root: { steps: {} } };
       active().acknowledgements.unlockWipe = null;
+      active().acknowledgements.backup = null;
       save();
     },
     getLastSaveError() {

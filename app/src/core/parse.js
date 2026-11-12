@@ -219,6 +219,8 @@ function evaluateGates(input = {}) {
     pcFreeBytes = null,
     inventory = null,
     backupAck = false,
+    backupVerified = null,
+    backupDetail = null,
     toolkitReady = false,
     method = 'apatch',
   } = input;
@@ -373,6 +375,18 @@ function evaluateGates(input = {}) {
       : 'Confirm the data-loss / backup acknowledgement before the unlock step.',
     blocks: !backupAck,
   });
+
+  if (typeof backupVerified === 'boolean') {
+    push({
+      id: 'backup-files',
+      label: 'EDL backup folder',
+      status: backupVerified ? 'pass' : 'fail',
+      detail: backupVerified
+        ? backupDetail || 'A backup folder was recorded and scanned.'
+        : 'Choose and record a backup folder containing images and GPT/rawprogram XML before unlocking.',
+      blocks: !backupVerified,
+    });
+  }
 
   return gates;
 }

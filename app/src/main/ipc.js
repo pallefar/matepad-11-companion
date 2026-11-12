@@ -9,7 +9,8 @@ const { groupItems, ITEM_BY_ID } = require('../core/inventory');
 const { publicPack } = require('../core/external-pack');
 const { DOWNLOADS, URLS, EXTERNAL_ALLOWLIST, SAFETY_COPY, UPSTREAM } = require('../core/sources');
 const { ensureDir, exists, sha256File } = require('./files');
-const { isSubPath, maskSerial } = require('../core/commands');
+const { isSubPath, maskSerial, formatBytes } = require('../core/commands');
+const { scanBackupFolder } = require('./backup');
 const { makeDemoDevice, makeDemoLogs } = require('./demo');
 const { exportDiagnostics } = require('./diagnostics');
 
@@ -83,6 +84,10 @@ function createIpc({
       pcFreeBytes: env.freeBytes,
       inventory,
       backupAck: Boolean(state.acknowledgements.unlockWipe),
+      backupVerified: Boolean(state.acknowledgements.backup?.confirmed),
+      backupDetail: state.acknowledgements.backup
+        ? `${state.acknowledgements.backup.imageCount} images · ${state.acknowledgements.backup.gptCount} GPT/XML · ${formatBytes(state.acknowledgements.backup.totalBytes)}`
+        : null,
       toolkitReady: toolkitPresent,
       method: state.method,
     };
@@ -208,18 +213,20 @@ function createIpc({
         logger.warn('app', `Startup device check failed: ${error.message}`);
       }
     }
-    try {
-      lastChecks = await checksService.runAll({
-        device: state.demo ? makeDemoDevice() : deviceService.getLastDevice(),
-        force: true,
-      });
-    } catch (error) {
-      logger.warn('checks', `System check failed: ${error.message}`);
-    }
     logger.info('app', `Workspace: ${state.workspace}`);
     logger.info('app', `Mode: ${state.demo ? 'demo preview' : 'live'} · root method: ${state.method}`);
-    const snapshot = await broadcastSnapshot();
-    return snapshot;
+    const initialSnapshot = await broadcastSnapshot();
+    checksService
+      .runAll({
+        device: state.demo ? makeDemoDevice() : deviceService.getLastDevice(),
+        force: true,
+      })
+      .then((checks) => {
+        lastChecks = checks;
+        broadcastSnapshot().catch((error) => logger.error('ipc', `snapshot after checks failed: ${error.message}`));
+      })
+      .catch((error) => logger.warn('checks', `System check failed: ${error.message}`));
+    return initialSnapshot;
   }
 
   const handle = (channel, fn) => {
@@ -428,6 +435,29 @@ function createIpc({
     lastChecks = await checksService.runAll({ device, force: true });
     logger.info('checks', 'System check refreshed.');
     return { device: sanitizeDevice(device), systemChecks: lastChecks };
+  });
+
+  handle('app:choose-backup', async (_payload, event) => {
+    if (store.isDemo()) throw new Error('Demo mode: turn off the preview to scan a real backup folder.');
+    const win = BrowserWindow.fromWebContents(event.sender);
+    const result = await dialog.showOpenDialog(win, {
+      title: 'Choose the 9008 backup folder',
+      properties: ['openDirectory'],
+      buttonLabel: 'Check this folder',
+    });
+    if (result.canceled || !result.filePaths?.[0]) return { canceled: true };
+    const scan = scanBackupFolder(result.filePaths[0]);
+    logger.info('backup', `Scanned ${scan.path}: ${scan.imageCount} images, ${scan.gptCount} GPT/XML, ${formatBytes(scan.totalBytes)}.`);
+    return { canceled: false, scan };
+  });
+
+  handle('app:record-backup', async ({ path: folder }) => {
+    if (store.isDemo()) throw new Error('Demo mode: no backup is recorded.');
+    const scan = scanBackupFolder(folder);
+    if (!scan.ok) throw new Error(`Backup folder is missing ${scan.missing.join(', ')}.`);
+    const backup = store.acknowledgeBackup(scan);
+    logger.good('backup', `Backup recorded: ${backup.imageCount} images, ${backup.gptCount} GPT/XML, ${formatBytes(backup.totalBytes)}.`);
+    return { backup };
   });
 
   handle('app:detect-edl', async () => {

@@ -23,6 +23,9 @@ const state = {
   buildProgress: null,
   buildBusy: false,
   checkRunning: false,
+  backupScan: null,
+  backupConfirm: false,
+  backupBusy: false,
   consoleFilter: 'all',
   consoleQuery: '',
   autoscroll: true,
@@ -256,8 +259,10 @@ async function boot() {
   try {
     const initial = await api.bootstrap();
     if (initial && initial.app) {
-      state.snapshot = initial;
-      state.logCache = initial.logs || [];
+      // A background system-check snapshot can arrive before bootstrap resolves.
+      // Keep it instead of overwriting the newer check results.
+      if (!state.snapshot) state.snapshot = initial;
+      state.logCache = state.snapshot?.logs || initial.logs || [];
     } else {
       state.snapshot = await api.snapshot();
       state.logCache = state.snapshot?.logs || [];
@@ -1090,6 +1095,7 @@ function gateLabel(id) {
     'tool-adb': t('checks.adb'),
     'tool-fastboot': t('checks.fastboot'),
     'driver-problem': t('checks.problems'),
+    'backup-files': t('unlock.backupTitle'),
     os: t('device.harmony'),
     battery: t('device.battery'),
     disk: t('prepare.freeSpace'),
@@ -1132,6 +1138,10 @@ function localGateDetail(gate) {
       return snap.systemChecks?.tools?.fastboot?.detail || t('checks.notRun');
     case 'driver-problem':
       return snap.systemChecks?.drivers?.detail || t('checks.noProblems');
+    case 'backup-files':
+      return snap.state.acknowledgements.backup
+        ? `${snap.state.acknowledgements.backup.imageCount} images · ${snap.state.acknowledgements.backup.gptCount} GPT/XML`
+        : t('unlock.backupNotRecorded');
     default:
       return gate.detail;
   }
@@ -1373,7 +1383,7 @@ function guideStepDefs() {
       body: t('guide.backup.body'),
       success: t('guide.backup.success'),
       stuck: t('guide.backup.stuck'),
-      done: Boolean(ack),
+      done: Boolean(ack) && Boolean(snap.state.acknowledgements.backup?.confirmed),
       view: 'unlock',
     },
     {
@@ -1411,16 +1421,22 @@ function guideSupportSummary() {
   const steps = guideStepDefs();
   const current = steps.find((step) => step.current) || steps[steps.length - 1];
   const checks = snap.systemChecks;
+  const demo = Boolean(snap.demo);
+  const host = `${snap.app?.host || 'unknown'} (${snap.app?.platform || 'unknown'})`;
   return [
     'MatePad 11 Companion support summary',
     `App: ${snap.app?.name || 'MatePad 11 Companion'} ${snap.app?.version || ''}`.trim(),
-    `Platform: ${snap.env?.platformLabel || snap.app?.platform || 'unknown'} (${snap.app?.host || ''})`,
-    `Mode: ${snap.demo ? 'demo preview' : 'live'}`,
+    `Host: ${host}`,
+    demo
+      ? `Simulated PC: ${snap.env?.platformLabel || 'Windows'} — DEMO ONLY; no device commands were run.`
+      : `Platform: ${snap.env?.platformLabel || 'unknown'}`,
+    `Mode: ${demo ? 'demo preview (simulated values)' : 'live'}`,
     `Current step: ${current.index + 1}/${steps.length} ${current.title}`,
-    `Device: ${snap.device?.model || 'none'} · HarmonyOS ${snap.device?.os?.version || '?'} · battery ${snap.device?.battery?.level ?? '?'}%`,
-    `Tool pack: ${snap.inventory?.requiredPresent ?? 0}/${snap.inventory?.requiredCount ?? 0} required`,
-    `System check: adb=${checks?.tools?.adb?.status || 'not run'}, fastboot=${checks?.tools?.fastboot?.status || 'not run'}, drivers=${checks?.drivers?.adb?.status || 'not run'}, phone=${checks?.phone?.connection?.status || 'not run'}`,
-    `Manager apps: magisk=${checks?.apps?.magisk?.status || 'not run'}, apatch=${checks?.apps?.apatch?.status || 'not run'}, su=${checks?.apps?.su?.status || 'not run'}`,
+    `Device: ${demo ? 'simulated ' : ''}${snap.device?.model || 'none'} · HarmonyOS ${snap.device?.os?.version || '?'} · battery ${snap.device?.battery?.level ?? '?'}%`,
+    `Tool pack: ${snap.inventory?.requiredPresent ?? 0}/${snap.inventory?.requiredCount ?? 0} required${demo ? ' (simulated)' : ''}`,
+    `System check: ${demo ? 'simulated · ' : ''}adb=${checks?.tools?.adb?.status || 'not run'}, fastboot=${checks?.tools?.fastboot?.status || 'not run'}, drivers=${checks?.drivers?.adb?.status || 'not run'}, phone=${checks?.phone?.connection?.status || 'not run'}`,
+    `Manager apps: ${demo ? 'simulated · ' : ''}magisk=${checks?.apps?.magisk?.status || 'not run'}, apatch=${checks?.apps?.apatch?.status || 'not run'}, su=${checks?.apps?.su?.status || 'not run'}`,
+    `Latest release: ${SUPPORT_REPO}/releases/latest`,
     `Generated: ${new Date().toISOString()}`,
   ].join('\n');
 }
@@ -1706,7 +1722,7 @@ function deviceView() {
     <aside class="side">
       <div class="card">
         ${cardTitle('shield', t('device.gatesTitle'))}
-        ${gateRows((snap.gates.gates || []).filter((gate) => ['model', 'os', 'battery', 'disk', 'backup', 'toolpack', 'tool-adb', 'tool-fastboot', 'driver-problem'].includes(gate.id)))}
+        ${gateRows((snap.gates.gates || []).filter((gate) => ['model', 'os', 'battery', 'disk', 'backup', 'backup-files', 'toolpack', 'tool-adb', 'tool-fastboot', 'driver-problem'].includes(gate.id)))}
       </div>
       <div class="card">
         <details class="disclosure">
@@ -1760,6 +1776,8 @@ function unlockView() {
   const route = snap.route;
   const locRoute = localRoute();
   const ack = snap.state.acknowledgements.unlockWipe;
+  const backupAck = snap.state.acknowledgements.backup;
+  const backupScan = state.backupScan;
   const unlocked = snap.readiness.unlocked;
   const canUnlock = snap.readiness.canUnlock;
   const device = snap.device;
@@ -1767,6 +1785,47 @@ function unlockView() {
   const steps = branch ? PROCEDURE[state.lang === 'zh' ? 'zh' : 'en'].unlock[branch] : [];
   const never = [t('unlock.never1'), t('unlock.never2'), t('unlock.never3'), t('unlock.never4')];
   const fastboot = snap.fastboot;
+
+  const backupBlock = (() => {
+    const recorded = backupAck?.confirmed;
+    const scan = backupScan;
+    const details = (item) => `<div class="env-list mt-12">
+      <div class="env-row"><span class="label">${esc(t('unlock.backupPath'))}</span><span class="value mono" title="${esc(item.path)}">${esc(item.path)}</span></div>
+      <div class="env-row"><span class="label">${esc(t('unlock.backupContents'))}</span><span class="value">${esc(t('unlock.backupImages', { n: item.imageCount }))} · ${esc(t('unlock.backupGpt', { n: item.gptCount }))} · ${esc(t('unlock.backupSize', { size: fmtGb(item.totalBytes) }))}</span></div>
+    </div>`;
+    const scanBlock = scan
+      ? `<div class="mt-12">
+          ${details(scan)}
+          ${scan.samples?.length ? `<div class="small dim mt-8">${esc(t('unlock.backupSamples'))}: <span class="mono">${esc(scan.samples.map((entry) => entry.name).join(', '))}</span></div>` : ''}
+          ${scan.ok
+            ? notice(esc(t('unlock.backupOk')), 'good', 'check')
+            : notice(esc(t('unlock.backupMissing', { missing: (scan.missing || []).join(', ') })), 'warn', 'alert')}
+          <label class="checkbox mt-12"><input type="checkbox" data-backup-confirm ${state.backupConfirm ? 'checked' : ''}> ${esc(t('unlock.backupConfirm'))}</label>
+          <div class="row mt-12" style="gap:8px;flex-wrap:wrap">
+            ${button(state.backupBusy ? t('unlock.backupBusy') : t('unlock.backupRecord'), 'record-backup', { tone: 'btn-primary', iconName: 'save', disabled: !scan.ok || !state.backupConfirm || state.backupBusy })}
+            ${button(t('unlock.backupChoose'), 'choose-backup', { tone: 'btn-ghost', iconName: 'folder', disabled: state.backupBusy })}
+          </div>
+        </div>`
+      : '';
+    if (recorded && !scan) {
+      return `<div class="card backup-card">
+        ${cardTitle('save', t('unlock.backupTitle'), badge(t('unlock.backupRecorded'), 'good'))}
+        <p class="small muted">${esc(t('unlock.backupRecordedText', { when: fmtDate(backupAck.confirmedAt) }))}</p>
+        ${details(backupAck)}
+        <div class="row mt-12" style="gap:8px;flex-wrap:wrap">
+          ${button(t('unlock.backupChange'), 'choose-backup', { tone: 'btn-ghost', size: 'btn-sm', iconName: 'folder', disabled: snap.demo })}
+        </div>
+        <div class="small dim mt-8">${esc(t('unlock.backupNote'))}</div>
+      </div>`;
+    }
+    return `<div class="card backup-card">
+      ${cardTitle('save', t('unlock.backupTitle'), badge(recorded ? t('unlock.backupRecorded') : t('unlock.backupNotRecorded'), recorded ? 'good' : 'warn'))}
+      <p class="small muted">${esc(t('unlock.backupText'))}</p>
+      <div class="mt-12">${button(t('unlock.backupChoose'), 'choose-backup', { tone: 'btn-ghost', iconName: 'folder', disabled: state.backupBusy })}</div>
+      ${scanBlock}
+      <div class="small dim mt-8">${esc(t('unlock.backupNote'))}</div>
+    </div>`;
+  })();
 
   const ackBlock = ack
     ? `<div class="notice good">${icon('check')}<div><strong>${esc(t('unlock.acked', { when: fmtDate(ack) }))}</strong></div></div>`
@@ -1870,6 +1929,7 @@ function unlockView() {
     <div class="stack-18">
       ${routePanel}
       ${!device ? `<div>${notice(esc(t('unlock.noDevice')), 'warn', 'alert')}</div>` : ''}
+      ${backupBlock}
       ${ackBlock}
       ${preflight}
       ${
@@ -2266,6 +2326,8 @@ async function handleAction(action, element) {
       await run(() => api.setLanguage(value), { success: state.t('settings.languageChanged') });
       return;
     case 'set-demo':
+      state.backupScan = null;
+      state.backupConfirm = false;
       await run(() => api.setDemo(value === 'true'));
       return;
     case 'open-disclaimer':
@@ -2458,6 +2520,32 @@ async function handleAction(action, element) {
       document.getElementById('guide-support')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       return;
     }
+    case 'choose-backup': {
+      if (snap.demo) return;
+      const result = await api.chooseBackup();
+      if (result?.canceled) return;
+      if (result?.scan) {
+        state.backupScan = result.scan;
+        state.backupConfirm = false;
+        render();
+        if (!result.scan.ok) toast(state.t('unlock.backupMissing', { missing: (result.scan.missing || []).join(', ') }), 'warn');
+      }
+      return;
+    }
+    case 'record-backup': {
+      if (!state.backupScan?.ok || !state.backupConfirm || snap.demo) return;
+      state.backupBusy = true;
+      render();
+      const result = await run(() => api.recordBackup(state.backupScan.path), { success: state.t('toast.backupRecorded') });
+      state.backupBusy = false;
+      if (result?.ok) {
+        state.backupScan = null;
+        state.backupConfirm = false;
+      }
+      await refreshSnapshot();
+      render();
+      return;
+    }
     case 'copy-support': {
       await copyText(guideSupportSummary());
       toast(state.t('guide.supportCopied'), 'good');
@@ -2495,6 +2583,11 @@ async function handleAction(action, element) {
 }
 
 function handleChange(event) {
+  if (event.target.matches('[data-backup-confirm]')) {
+    state.backupConfirm = event.target.checked;
+    render();
+    return;
+  }
   const input = event.target;
   if (input.id === 'force-source') {
     state.forceSource = input.checked;

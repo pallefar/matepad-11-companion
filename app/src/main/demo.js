@@ -200,7 +200,7 @@ function makeDemoChecks(device = makeDemoDevice()) {
 function makeDemoLogs(now = new Date()) {
   const base = now.getTime() - 42000;
   const entries = [
-    ['info', 'app', 'MatePad 11 Companion 1.3.0 started (demo profile)'],
+    ['info', 'app', 'MatePad 11 Companion 1.4.0 started (demo profile)'],
     ['good', 'workspace', 'Toolkit found: C:\\MatePad11\\MatePadToolbox.exe'],
     ['info', 'inventory', 'Scanned 27 expected paths; APatch requirements present'],
     ['info', 'adb', 'adb devices -l → 1 device'],
@@ -236,6 +236,15 @@ function makeDemoState(base) {
     acknowledgements: {
       disclaimer: '2026-11-08T15:58:00.000Z',
       unlockWipe: '2026-11-09T18:12:00.000Z',
+      backup: {
+        path: 'C:\\MatePad11\\backup',
+        imageCount: 42,
+        gptCount: 2,
+        totalBytes: 18.4 * 1024 ** 3,
+        checkedAt: '2026-11-09T18:08:00.000Z',
+        confirmedAt: '2026-11-09T18:11:00.000Z',
+        confirmed: true,
+      },
     },
     progress: {
       unlock: { steps: { backup: true } },
