@@ -9,7 +9,8 @@ import {
 } from './i18n.js';
 
 const api = window.companion;
-const VIEWS = ['overview', 'prepare', 'tools', 'device', 'unlock', 'root', 'console', 'settings'];
+const VIEWS = ['overview', 'guide', 'prepare', 'tools', 'device', 'unlock', 'root', 'console', 'settings'];
+const SUPPORT_REPO = 'https://github.com/pallefar/matepad-11-companion';
 
 const state = {
   snapshot: null,
@@ -374,6 +375,7 @@ function renderChrome() {
       label: t('nav.group.procedure'),
       items: [
         ['overview', 'overview'],
+        ['guide', 'layers'],
         ['prepare', 'prepare'],
         ['tools', 'tools'],
         ['device', 'device'],
@@ -425,7 +427,8 @@ function renderChrome() {
       <button class="side-action" data-action="set-language" data-value="${snap.state.language === 'en' ? 'zh' : 'en'}">
         ${icon('file')}${snap.state.language === 'en' ? '中文' : 'EN'}
       </button>
-      <button class="side-action" data-nav="settings" title="${esc(t('nav.settings'))}">${icon('settings')}</button>
+      <button class="side-action" data-nav="guide" title="${esc(t('guide.supportTitle'))}" aria-label="${esc(t('guide.supportTitle'))}">${icon('help')}</button>
+      <button class="side-action" data-nav="settings" title="${esc(t('nav.settings'))}" aria-label="${esc(t('nav.settings'))}">${icon('settings')}</button>
     </div>`;
 
   const device = snap.device;
@@ -463,6 +466,8 @@ function renderChrome() {
 
 function viewMarkup() {
   switch (state.view) {
+    case 'guide':
+      return guideView();
     case 'prepare':
       return prepareView();
     case 'tools':
@@ -570,7 +575,7 @@ function overviewView() {
       lede: esc(t('overview.lede')),
       actions: `<button class="btn btn-primary" data-nav="${esc(next?.view || 'prepare')}">${icon('arrowRight')}${esc(
         t('overview.primary', { step: nextLabel }),
-      )}</button><button class="btn btn-ghost" data-nav="console">${icon('console')}${esc(t('overview.secondary'))}</button>`,
+      )}</button><button class="btn btn-ghost" data-nav="guide">${icon('layers')}${esc(t('overview.stepByStep'))}</button><button class="btn btn-ghost" data-nav="console">${icon('console')}${esc(t('overview.secondary'))}</button>`,
     })}
     ${
       !ack
@@ -1301,6 +1306,204 @@ function systemCheckCard() {
     </div>
     <div class="small dim mt-12">${esc(t('checks.hint'))}</div>
   </div>`;
+}
+
+
+function guideStepDefs() {
+  const snap = state.snapshot;
+  const t = state.t;
+  const ack = snap.state.acknowledgements.unlockWipe;
+  const inv = snap.inventory;
+  const device = snap.device;
+  const defs = [
+    {
+      id: 'safety',
+      title: t('guide.safety.title'),
+      body: t('guide.safety.body'),
+      success: t('guide.safety.success'),
+      stuck: t('guide.safety.stuck'),
+      done: Boolean(snap.state.acknowledgements.disclaimer),
+      view: 'guide',
+      action: 'open-disclaimer',
+    },
+    {
+      id: 'pc',
+      title: t('guide.pc.title'),
+      body: t('guide.pc.body'),
+      success: t('guide.pc.success'),
+      stuck: t('guide.pc.stuck'),
+      done: Boolean(snap.env.isWindows),
+      view: 'prepare',
+    },
+    {
+      id: 'toolkit',
+      title: t('guide.toolkit.title'),
+      body: t('guide.toolkit.body'),
+      success: t('guide.toolkit.success'),
+      stuck: t('guide.toolkit.stuck'),
+      done: Boolean(snap.env.toolkit?.present),
+      view: 'prepare',
+    },
+    {
+      id: 'pack',
+      title: t('guide.pack.title'),
+      body: t('guide.pack.body'),
+      success: t('guide.pack.success'),
+      stuck: t('guide.pack.stuck'),
+      done: (inv?.requiredMissing?.length || 0) === 0,
+      view: 'tools',
+    },
+    {
+      id: 'tablet',
+      title: t('guide.tablet.title'),
+      body: t('guide.tablet.body'),
+      success: t('guide.tablet.success'),
+      stuck: t('guide.tablet.stuck'),
+      done: device?.state === 'device',
+      view: 'device',
+    },
+    {
+      id: 'backup',
+      title: t('guide.backup.title'),
+      body: t('guide.backup.body'),
+      success: t('guide.backup.success'),
+      stuck: t('guide.backup.stuck'),
+      done: Boolean(ack),
+      view: 'unlock',
+    },
+    {
+      id: 'unlock',
+      title: t('guide.unlock.title'),
+      body: t('guide.unlock.body'),
+      success: t('guide.unlock.success'),
+      stuck: t('guide.unlock.stuck'),
+      done: Boolean(snap.readiness.unlocked),
+      view: 'unlock',
+    },
+    {
+      id: 'root',
+      title: t('guide.root.title'),
+      body: t('guide.root.body'),
+      success: t('guide.root.success'),
+      stuck: t('guide.root.stuck'),
+      done: Boolean(snap.readiness.rooted),
+      view: 'root',
+    },
+  ];
+  const firstOpen = defs.findIndex((step) => !step.done);
+  return defs.map((step, index) => ({
+    ...step,
+    index,
+    current: index === firstOpen,
+    status: step.done ? 'pass' : index === firstOpen ? 'attention' : 'pending',
+  }));
+}
+
+function guideSupportSummary() {
+  const snap = state.snapshot;
+  const steps = guideStepDefs();
+  const current = steps.find((step) => step.current) || steps[steps.length - 1];
+  const checks = snap.systemChecks;
+  return [
+    'MatePad 11 Companion support summary',
+    `App: ${snap.app?.name || 'MatePad 11 Companion'} ${snap.app?.version || ''}`.trim(),
+    `Platform: ${snap.env?.platformLabel || snap.app?.platform || 'unknown'} (${snap.app?.host || ''})`,
+    `Mode: ${snap.demo ? 'demo preview' : 'live'}`,
+    `Current step: ${current.index + 1}/${steps.length} ${current.title}`,
+    `Device: ${snap.device?.model || 'none'} · HarmonyOS ${snap.device?.os?.version || '?'} · battery ${snap.device?.battery?.level ?? '?'}%`,
+    `Tool pack: ${snap.inventory?.requiredPresent ?? 0}/${snap.inventory?.requiredCount ?? 0} required`,
+    `System check: adb=${checks?.tools?.adb?.status || 'not run'}, fastboot=${checks?.tools?.fastboot?.status || 'not run'}, drivers=${checks?.drivers?.adb?.status || 'not run'}, phone=${checks?.phone?.connection?.status || 'not run'}`,
+    `Manager apps: magisk=${checks?.apps?.magisk?.status || 'not run'}, apatch=${checks?.apps?.apatch?.status || 'not run'}, su=${checks?.apps?.su?.status || 'not run'}`,
+    `Generated: ${new Date().toISOString()}`,
+  ].join('\n');
+}
+
+function guideSupportIssueUrl() {
+  const snap = state.snapshot;
+  const steps = guideStepDefs();
+  const current = steps.find((step) => step.current) || steps[steps.length - 1];
+  const title = `[Support] ${current.title} — MatePad 11 Companion`;
+  const body = [
+    '### What happened?',
+    '',
+    '',
+    '### Current step',
+    `${current.index + 1}/${steps.length} — ${current.title}`,
+    '',
+    '### Environment',
+    `- App: ${snap.app?.name || 'MatePad 11 Companion'} ${snap.app?.version || ''}`.trim(),
+    `- Platform: ${snap.env?.platformLabel || snap.app?.platform || 'unknown'}`,
+    `- Device: ${snap.device?.model || 'none'} · HarmonyOS ${snap.device?.os?.version || '?'}`,
+    `- Tool pack: ${snap.inventory?.requiredPresent ?? 0}/${snap.inventory?.requiredCount ?? 0} required`,
+    '',
+    'Please attach the diagnostics file exported from the Guide page. The serial is masked.',
+  ].join('\n');
+  return `${SUPPORT_REPO}/issues/new?title=${encodeURIComponent(title)}&body=${encodeURIComponent(body)}`;
+}
+
+function guideView() {
+  const t = state.t;
+  const steps = guideStepDefs();
+  const done = steps.filter((step) => step.done).length;
+  const current = steps.find((step) => step.current) || steps[steps.length - 1];
+  const allDone = steps.every((step) => step.done);
+  const pct = Math.round((done / steps.length) * 100);
+  const currentAction = current.action
+    ? button(t('guide.open'), current.action, { tone: 'btn-primary', iconName: 'arrowRight' })
+    : `<button class="btn btn-primary" data-nav="${esc(current.view)}">${icon('arrowRight')}${esc(t('guide.open'))}</button>`;
+  const rows = steps
+    .map((step) => {
+      const attrs = step.action ? `data-action="${esc(step.action)}"` : `data-nav="${esc(step.view)}"`;
+      return `<button class="guide-row ${step.current ? 'is-current' : ''}" ${attrs}>
+        <span class="guide-row-num">${String(step.index + 1).padStart(2, '0')}</span>
+        <span class="guide-row-copy"><span class="guide-row-title">${esc(step.title)}</span><span class="guide-row-detail">${esc(step.success)}</span></span>
+        ${statusText(step.status)}
+      </button>`;
+    })
+    .join('');
+  const supportButtons = `
+    ${button(t('guide.export'), 'export-diagnostics', { tone: 'btn-ghost', size: 'btn-sm', iconName: 'save' })}
+    ${button(t('guide.copy'), 'copy-support', { tone: 'btn-ghost', size: 'btn-sm', iconName: 'copy' })}
+    ${linkButton(t('guide.issue'), guideSupportIssueUrl(), { arrow: true, size: 'btn-sm' })}
+    ${linkButton(t('guide.runbook'), `${SUPPORT_REPO}/blob/main/docs/WINDOWS-RUNBOOK.md`, { arrow: true, size: 'btn-sm' })}
+    ${linkButton(t('guide.toolpack'), `${SUPPORT_REPO}/blob/main/docs/TOOL-PACK.md`, { arrow: true, size: 'btn-sm' })}
+  `;
+  return `${pageHead({
+    eyebrow: esc(t('guide.eyebrow')),
+    title: esc(t('guide.title')),
+    lede: esc(t('guide.lede')),
+    actions: `${button(t('guide.supportTitle'), 'guide-support', { tone: 'btn-ghost', size: 'btn-sm', iconName: 'help' })}${button(t('guide.export'), 'export-diagnostics', { tone: 'btn-ghost', size: 'btn-sm', iconName: 'save' })}`,
+  })}
+  <div class="guide-progress card flat mt-28">
+    <div class="row-between"><strong>${esc(allDone ? t('guide.complete') : t('guide.current'))}</strong><span class="mono">${esc(t('guide.progress', { done, total: steps.length }))}</span></div>
+    <div class="meter mt-8"><span style="width:${allDone ? 100 : pct}%;background:${allDone ? 'var(--good)' : 'var(--accent)'}"></span></div>
+  </div>
+  <section class="card guide-current mt-20">
+    <div class="guide-current-head">
+      <div>
+        <div class="eyebrow">${esc(allDone ? t('guide.complete') : t('guide.stepOf', { n: current.index + 1, total: steps.length }))}</div>
+        <h2>${esc(allDone ? t('guide.complete') : current.title)}</h2>
+      </div>
+      ${badge(allDone ? t('guide.complete') : t('guide.current'), allDone ? 'good' : 'warn')}
+    </div>
+    <p class="lede mt-12">${esc(allDone ? t('guide.completeText') : current.body)}</p>
+    ${
+      allDone
+        ? ''
+        : `<div class="guide-success mt-16">${icon('check')}<div><strong>${esc(t('guide.success'))}</strong><span>${esc(current.success)}</span></div></div>
+           <details class="step-stuck mt-12"><summary>${esc(t('guide.stuck'))}</summary><p>${esc(current.stuck)}</p></details>`
+    }
+    <div class="mt-16">${allDone ? button(t('guide.export'), 'export-diagnostics', { tone: 'btn-primary', iconName: 'save' }) : currentAction}</div>
+  </section>
+  <section class="card mt-20 guide-support" id="guide-support">
+    ${cardTitle('help', t('guide.supportTitle'))}
+    <p class="small muted">${esc(t('guide.supportText'))}</p>
+    <div class="support-actions mt-12">${supportButtons}</div>
+  </section>
+  <section class="card mt-20">
+    ${cardTitle('layers', t('guide.allSteps'), badge(`${done}/${steps.length}`, done === steps.length ? 'good' : ''))}
+    <div class="guide-list mt-12">${rows}</div>
+  </section>`;
 }
 
 function deviceView() {
@@ -2235,6 +2438,15 @@ async function handleAction(action, element) {
       toast(state.t('toast.copied'), 'good');
       return;
     }
+    case 'guide-support': {
+      document.getElementById('guide-support')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      return;
+    }
+    case 'copy-support': {
+      await copyText(guideSupportSummary());
+      toast(state.t('guide.supportCopied'), 'good');
+      return;
+    }
     case 'export-diagnostics': {
       const result = await run(() => api.exportDiagnostics());
       if (result?.path) toast(`${state.t('toast.diagnosticsSaved')}: ${result.path}`, 'good');
@@ -2346,7 +2558,7 @@ function handleKeydown(event) {
   if (event.key === 'Escape') {
     return;
   }
-  if (event.altKey && /^[1-8]$/.test(event.key)) {
+  if (event.altKey && /^[1-9]$/.test(event.key)) {
     event.preventDefault();
     navigate(VIEWS[Number(event.key) - 1]);
     return;

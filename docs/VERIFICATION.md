@@ -25,9 +25,9 @@ Coverage:
 - System-check parsers: adb/fastboot versions, package list, Magisk/APatch/KernelSU, developer settings, su, Windows PnP classification, summary states.
 - EDL PowerShell JSON parsing (object/array/prefixed/BOM-less), COM extraction.
 
-Result: **44 pass, 0 fail**. All renderer translation keys used literally are present in both `en` and `zh` (423 literal keys checked; dynamic keys spot-checked).
+Result: **44 pass, 0 fail**. All renderer translation keys used literally are present in both `en` and `zh` (476 literal keys checked; dynamic keys spot-checked).
 
-## End-to-end — 29 checks passed
+## End-to-end — 31 checks passed
 
 Command: `cd app && node scripts/e2e.mjs` (Playwright launches the real Electron app).
 
@@ -65,8 +65,10 @@ Live workspace profile (macOS):
 27. Light mode: topbar toggle applies light tokens (body `rgb(244, 241, 234)`), persists across reload, restores dark; Appearance control and no-overflow checks pass.
 28. System check: real tool checks, Windows driver rows, phone developer/USB/bootloader/root state, Magisk/APatch/KernelSU/su; `Run check` completes with no errors.
 29. Live system check: real adb + fastboot version commands execute on this Mac and report pass; drivers correctly report Windows-only.
+30. Guided setup: one current step, eight ordered steps, support actions; narrow-width and light-mode screenshots pass.
+31. Support summary copy action shows the success toast and completes without renderer errors.
 
-Result: **29 pass, 0 fail, zero console errors, zero page errors.**
+Result: **31 pass, 0 fail, zero console errors, zero page errors.**
 
 ## Download endpoints actually exercised
 
@@ -85,7 +87,7 @@ Result: **29 pass, 0 fail, zero console errors, zero page errors.**
 ## Windows package
 
 - Built with `electron-packager` for `win32-x64`, Electron 33.4.11, asar, icon.
-- `MatePad 11 Companion.exe` is a PE32+ x86-64 GUI executable; `resources/app.asar` is about 661 KB and contains only runtime files (`main.js`, `preload.js`, `src/**`, `node_modules/adm-zip`, licenses, README-FIRST). Tests, scripts, screenshots, docs, and build assets are excluded.
+- `MatePad 11 Companion.exe` is a PE32+ x86-64 GUI executable; `resources/app.asar` is about 680 KB and contains only runtime files (`main.js`, `preload.js`, `src/**`, `node_modules/adm-zip`, licenses, README-FIRST). Tests, scripts, screenshots, docs, and build assets are excluded.
 - A macOS asar build from the same configuration was launched with Playwright: title, Overview, six phases, zero renderer errors. This validates asar packaging, not the Windows binary.
 - The ready workspace ZIP was built separately (25 files, 37.9 MiB expanded / 24.9 MiB ZIP) and validated against the app inventory and its own manifest.
 - The final app ZIP is rebuilt after the external-pack feature; see `dist/CHECKSUMS.txt` for its SHA-256.
@@ -125,4 +127,4 @@ The E2E summary JSON (check list + zero errors) is written under the OS temp dir
 
 ## Artifact
 
-`dist/MatePad-11-Companion-1.0.0-win-x64.zip` contains the unsigned Windows x64 folder build and the user docs. SHA-256 values for the ZIP and the executable are in `dist/CHECKSUMS.txt` and `dist/MatePad-11-Companion-1.0.0-win-x64.zip.sha256`.
+`dist/MatePad-11-Companion-1.1.0-win-x64.zip` contains the unsigned Windows x64 folder build and the user docs. SHA-256 values for the ZIP and the executable are in `dist/CHECKSUMS.txt` and `dist/MatePad-11-Companion-1.1.0-win-x64.zip.sha256`.

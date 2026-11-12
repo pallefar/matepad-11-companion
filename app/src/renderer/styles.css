@@ -938,3 +938,37 @@ html[data-theme="light"] .toast { box-shadow: 0 18px 50px rgba(50, 35, 20, 0.2);
 @media (max-width: 1080px) {
   .system-check .check-grid { grid-template-columns: 1fr; }
 }
+
+/* ============ guided setup ============ */
+
+.guide-progress { padding: 14px 16px; border-style: solid; }
+.guide-progress .meter { height: 7px; margin-top: 9px; }
+.guide-current { border-color: var(--accent-line); }
+.guide-current-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; }
+.guide-current-head h2 { margin-top: 6px; font-size: 22px; }
+.guide-success {
+  display: flex; align-items: flex-start; gap: 9px; padding: 10px 12px;
+  border: 1px solid var(--good-line); background: var(--good-soft); border-radius: 8px;
+  color: var(--text-2); font-size: 12px;
+}
+.guide-success svg { width: 15px; height: 15px; color: var(--good); flex: none; margin-top: 1px; }
+.guide-success strong { display: block; color: var(--text); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 2px; }
+.guide-success span { display: block; }
+.guide-list { display: flex; flex-direction: column; gap: 4px; }
+.guide-row {
+  display: flex; align-items: center; gap: 11px; width: 100%; padding: 9px 10px;
+  border: 1px solid transparent; border-radius: 8px; background: transparent;
+  color: var(--text); text-align: left; transition: 140ms var(--ease);
+}
+.guide-row:hover { background: var(--surface-hover); border-color: var(--line); }
+.guide-row.is-current { background: var(--accent-soft); border-color: var(--accent-line); }
+.guide-row-num { font-family: var(--mono); font-size: 11px; color: var(--accent); width: 22px; flex: none; }
+.guide-row-copy { flex: 1; min-width: 0; }
+.guide-row-title { display: block; font-size: 12.5px; font-weight: 550; }
+.guide-row-detail { display: block; font-size: 11px; color: var(--text-3); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.guide-row .status { flex: none; font-size: 10.5px; }
+.support-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.support-actions .btn { justify-content: flex-start; }
+@media (max-width: 900px) {
+  .guide-current-head { flex-direction: column; gap: 8px; }
+}

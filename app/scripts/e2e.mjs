@@ -99,6 +99,16 @@ async function snap(page) {
 
   assert.equal(await page.locator('html').getAttribute('data-theme'), 'dark');
   await page.screenshot({ path: path.join(SHOTS, '01-overview.png') });
+  await goto(page, 'guide');
+  assert.match(await page.locator('h1').innerText(), /One step at a time/i);
+  assert.equal(await page.locator('.guide-row').count(), 8);
+  assert.ok((await page.locator('.guide-support [data-action], .guide-support [data-external]').count()) >= 5);
+  await page.screenshot({ path: path.join(SHOTS, '25-guide.png') });
+  await page.locator('[data-action="copy-support"]').click();
+  await page.waitForTimeout(300);
+  assert.match(await page.locator('.toast').last().innerText(), /Support summary copied/i);
+  pass('guided setup shows one current step, eight ordered steps and support actions');
+  pass('copy support summary action succeeds');
 
   await page.locator('[data-action="toggle-theme"]').click();
   await page.waitForTimeout(600);
@@ -115,6 +125,8 @@ async function snap(page) {
   await goto(page, 'settings');
   assert.equal(await page.locator('#view [data-action="set-theme"][data-value="light"]').getAttribute('aria-pressed'), 'true');
   await page.screenshot({ path: path.join(SHOTS, '20-settings-light.png') });
+  await goto(page, 'guide');
+  await page.screenshot({ path: path.join(SHOTS, '26-guide-light.png') });
   await goto(page, 'device');
   await page.locator('.system-check').screenshot({ path: path.join(SHOTS, '24-system-check-light.png') });
   await page.reload();
@@ -218,6 +230,10 @@ async function snap(page) {
   const narrowOverflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   assert.ok(narrowOverflow <= 1, `narrow horizontal overflow: ${narrowOverflow}`);
   await page.screenshot({ path: path.join(SHOTS, '09-overview-narrow.png') });
+  await goto(page, 'guide');
+  await page.waitForTimeout(250);
+  const guideNarrowOverflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+  assert.ok(guideNarrowOverflow <= 1, `guide narrow horizontal overflow: ${guideNarrowOverflow}`);
   await page.setViewportSize({ width: 1120, height: 760 });
   await page.locator('.side-action[data-action="set-language"]').click();
   await page.waitForTimeout(500);
@@ -369,14 +385,20 @@ async function snap(page) {
 
   const deviceResult = await page.evaluate(() => window.companion.deviceAction('refresh'));
   assert.equal(deviceResult.ok, true, deviceResult.error);
-  assert.ok(['no-device', 'no-adb', 'unauthorized'].includes(deviceResult.device?.state), JSON.stringify(deviceResult.device));
+  const liveDeviceState = deviceResult.device?.state;
+  assert.ok(['device', 'no-device', 'no-adb', 'unauthorized'].includes(liveDeviceState), JSON.stringify(deviceResult.device));
+  if (liveDeviceState === 'device') {
+    assert.equal(deviceResult.device.connected, true);
+    pass(`device refresh sees connected ${deviceResult.device.model || 'Android device'} and reads its state`);
+  } else {
+    pass('device refresh runs real adb and reports no authorized tablet');
+  }
   const liveCheck = await page.evaluate(() => window.companion.systemCheck());
   assert.equal(liveCheck.ok, true, liveCheck.error);
   assert.equal(liveCheck.systemChecks?.tools?.adb?.status, 'pass', JSON.stringify(liveCheck.systemChecks?.tools?.adb));
   assert.equal(liveCheck.systemChecks?.tools?.fastboot?.status, 'pass', JSON.stringify(liveCheck.systemChecks?.tools?.fastboot));
   assert.equal(liveCheck.systemChecks?.drivers?.supported, false);
   pass('live system check executes real adb and fastboot on this Mac');
-  pass('device refresh runs real adb without a tablet and reports no device');
 
   const ack = await page.evaluate(() => window.companion.ackWipe('WIPE', true));
   assert.equal(ack.ok, true);
