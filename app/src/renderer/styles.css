@@ -718,3 +718,13 @@ details.disclosure .disclosure-body { padding: 2px 12px 12px; }
 :focus-visible { outline: 2px solid #ffb99f; outline-offset: 2px; border-radius: 4px; }
 button:focus:not(:focus-visible) { outline: none; }
 .step-check input { outline-offset: 3px; }
+
+
+/* external pack */
+.ext-row { display: flex; align-items: flex-start; gap: 10px; padding: 10px 0; border-bottom: 1px solid #1c2027; }
+.ext-row:last-child { border-bottom: 0; }
+.ext-main { flex: 1; min-width: 0; }
+.ext-row .tool-name { flex-wrap: wrap; }
+.ext-row .tool-path { white-space: normal; word-break: break-all; }
+.external-progress { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+.external-progress .meter { flex: 1; }

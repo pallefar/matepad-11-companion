@@ -32,6 +32,9 @@ const URLS = {
 
 const EXTERNAL_ALLOWLIST = [
   'github.com',
+  'gitee.com',
+  'drive.google.com',
+  'drive.usercontent.google.com',
   'raw.githubusercontent.com',
   'codeload.github.com',
   'api.github.com',

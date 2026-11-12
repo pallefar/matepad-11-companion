@@ -44,6 +44,22 @@ workspace/
 
 The companion's **Tool pack** page is a live mirror of this list. Required items for the selected root method block the unlock action; ROM-only items do not.
 
+## One-click source (new)
+
+The app's **Tool pack → Fetch external pack** downloads and hash-verifies the missing unlock/APatch files:
+
+| File | Source | SHA-256 |
+|---|---|---|
+| `unlock/Huawei865870_devprg.elf` (signed firehose) | XDA DBY-W09 guide's public Drive folder | `a0e08a0a…adc7c9d` |
+| `unlock/Huawei865870_abl_unlock.img` (unlocked ABL) | same folder | `552e96d2…3f0b79d` |
+| `tools/QSaharaServer.exe` (174,592 B) | MiFlash mirror (Gitee) | `de5cd326…8561f09e` |
+| `tools/fh_loader.exe` (485,888 B, 23.06 build) | OPlus EDL Toolkit | `84bec0a6…b91c5145` |
+| `tools/driver/adbdriver.exe` + `qcdriver.exe` | signed Xiaomi MiFlash Unlock driver installer | `206e3065…6a3430` |
+
+The driver installer is a **combined** ADB + Qualcomm installer substituted for the author's two separate files; both toolkit Driver buttons launch it. It is Authenticode-signed by Beijing Xiaomi. QSaharaServer and fh_loader are unsigned Qualcomm utilities; hashes are pinned and the fetcher refuses mismatches.
+
+A ready-made workspace is also shipped as **`MatePad-11-Workspace-1.0.0.zip`**. It contains the platform-tools, 7-Zip, Magisk, APatch, KernelPatch, QSaharaServer, the 2023 fh_loader, the two signed images, and the driver installer, already in the `tools/` + `unlock/` layout. Build the toolkit into it on Windows; no import is required.
+
 ## Source rules
 
 - **Use the pack that came with the original toolkit** (the author's distribution) when possible. That is the intended source.
@@ -61,6 +77,7 @@ Source for those hashes and links: <https://github.com/serkanvela/matepad11-hos4
 - Drivers: the original pack's `driver/adbdriver.exe` and `driver/qcdriver.exe`, or an equivalent Huawei/Qualcomm driver you already trust. Windows Update sometimes installs a working ADB driver.
 - `vbmeta.zip`, `rawprogram*`, `misc.img`: only needed for ROM flashing/rescue, not for unlock/root. Take them from the original pack or the matching firmware package.
 - `HiSuite1.exe` and `HiSuite Proxy V3.exe`: only for downgrading HarmonyOS 4. Optional.
+- `rawprogram*`, `vbmeta.zip`, `misc.img`, `ptool.exe`: only for ROM flashing/rescue. `ptool` can generate rawprogram files from a 9008 backup; `vbmeta.zip` is firmware-specific. The ready workspace intentionally omits these.
 
 ## The importer
 

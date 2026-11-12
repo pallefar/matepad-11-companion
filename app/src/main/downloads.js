@@ -15,8 +15,13 @@ const {
 } = require('./files');
 const { runCapture } = require('./shell');
 const { URLS, DOWNLOADS } = require('../core/sources');
+const { EXTERNAL_PACK } = require('../core/external-pack');
 
 const USER_AGENT = 'MatePad-11-Companion/1.0 (+https://github.com/run2000s/MatePad11_Tool_Kit_GUI)';
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 async function httpDownload(url, dest, { onProgress, headers = {}, timeoutMs = 240000 } = {}) {
   ensureDir(path.dirname(dest));
@@ -372,6 +377,111 @@ function createDownloadService({ store, logger }) {
     return { ok: true, id: 'kernelpatch', version: release.tag_name, hashes };
   }
 
+  async function installExternalPack() {
+    const root = workspace();
+    const setup = path.join(root, '.setup', 'external');
+    ensureDir(setup);
+    const entryResults = [];
+    const errors = [];
+    for (const entry of EXTERNAL_PACK) {
+      const destinations = entry.destinations.map((rel) => ({ rel, absolute: path.join(root, rel) }));
+      const alreadyPresent = destinations.every((destination) => {
+        if (!exists(destination.absolute)) return false;
+        const stat = fs.statSync(destination.absolute);
+        if (stat.size !== entry.bytes) return false;
+        const recorded = store.get().hashes?.[destination.rel];
+        return recorded?.sha256 === entry.sha256;
+      });
+      if (alreadyPresent) {
+        entryResults.push({ id: entry.id, status: 'present' });
+        emit({ id: 'external', phase: 'skip', label: entry.label, message: 'Already present and hash-matched' });
+        continue;
+      }
+      const temp = path.join(setup, `${entry.id}.download`);
+      let installed = false;
+      let lastError = null;
+      for (const url of entry.urls) {
+        if (installed) break;
+        for (let attempt = 1; attempt <= 3 && !installed; attempt += 1) {
+          try {
+            emit({
+              id: 'external',
+              phase: 'download',
+              label: entry.label,
+              message: `Downloading ${entry.label} (attempt ${attempt}/3)`,
+            });
+            await httpDownload(url, temp, {
+              timeoutMs: 180000,
+              onProgress: (progress) =>
+                emit({ id: 'external', phase: 'download', label: entry.label, ...progress }),
+            });
+            const stat = fs.statSync(temp);
+            if (stat.size !== entry.bytes) {
+              throw new Error(`size mismatch: expected ${entry.bytes}, got ${stat.size}`);
+            }
+            const hash = await sha256File(temp);
+            if (hash !== entry.sha256) {
+              throw new Error(`SHA-256 mismatch: expected ${entry.sha256.slice(0, 16)}…, got ${hash.slice(0, 16)}…`);
+            }
+            installed = true;
+          } catch (error) {
+            lastError = error;
+            try {
+              fs.unlinkSync(temp);
+            } catch {
+              /* ignore */
+            }
+            logger.warn('download', `${entry.label} attempt ${attempt} failed: ${error.message}`);
+            if (attempt < 3) await sleep(1500 * attempt);
+          }
+        }
+      }
+      if (!installed) {
+        const message = `${entry.label}: ${lastError?.message || 'all sources failed'}`;
+        errors.push({ id: entry.id, label: entry.label, error: message });
+        logger.error('download', message);
+        emit({ id: 'external', phase: 'error', label: entry.label, message });
+        continue;
+      }
+      const hash = entry.sha256;
+      for (const destination of destinations) {
+        ensureDir(path.dirname(destination.absolute));
+        const existed = exists(destination.absolute);
+        copyWithBackup(temp, destination.absolute);
+        store.update((draft) => {
+          draft.hashes[destination.rel] = {
+            sha256: hash,
+            bytes: entry.bytes,
+            at: new Date().toISOString(),
+            source: `external:${entry.id} — ${entry.source}`,
+          };
+          return draft;
+        });
+        logger.good('download', `${entry.label} → ${destination.rel}${existed ? ' (replaced, backup kept)' : ''}`);
+      }
+      try {
+        fs.unlinkSync(temp);
+      } catch {
+        /* ignore */
+      }
+      installed = true;
+      entryResults.push({ id: entry.id, status: 'installed', destinations: entry.destinations });
+    }
+    emit({
+      id: 'external',
+      phase: errors.length ? 'error' : 'done',
+      label: 'External pack',
+      message: errors.length ? `${errors.length} file(s) failed` : 'External unlock/Qualcomm pack ready',
+    });
+    return {
+      ok: errors.length === 0,
+      installed: entryResults.filter((entry) => entry.status === 'installed').map((entry) => entry.id),
+      present: entryResults.filter((entry) => entry.status === 'present').map((entry) => entry.id),
+      errors,
+      total: EXTERNAL_PACK.length,
+    };
+  }
+
   const runners = {
     platform: installPlatformTools,
     sevenzip: installSevenZip,
@@ -396,7 +506,7 @@ function createDownloadService({ store, logger }) {
     }
   }
 
-  return { install, setProgressSink, ensure7zr, httpDownload };
+  return { install, installExternalPack, setProgressSink, ensure7zr, httpDownload };
 }
 
 module.exports = { createDownloadService, httpDownload, fetchJson, pickAsset };

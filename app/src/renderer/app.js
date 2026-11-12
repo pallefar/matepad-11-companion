@@ -804,6 +804,34 @@ function downloadStatus(id) {
   return { download, present, items };
 }
 
+function externalEntryPresent(entry) {
+  const inv = state.snapshot.inventory;
+  return (entry.itemIds || []).every((id) => inv.items.find((item) => item.id === id)?.present);
+}
+
+function externalPresentCount() {
+  return (state.snapshot.externalPack || []).filter(externalEntryPresent).length;
+}
+
+function externalRows() {
+  const t = state.t;
+  return (state.snapshot.externalPack || [])
+    .map((entry) => {
+      const present = externalEntryPresent(entry);
+      return `<div class="ext-row">
+        ${statusIcon(present ? 'ready' : 'blocked')}
+        <div class="ext-main">
+          <div class="tool-name">${esc(entry.label)} ${badge(present ? t('tools.externalPresent') : t('tools.externalMissing'), present ? 'good' : 'bad')}</div>
+          <div class="tool-path">${esc(entry.destinations.join(' · '))}</div>
+          <div class="tool-note">${esc(entry.source)} · SHA-256 <span class="mono">${esc(entry.sha256.slice(0, 14))}…</span></div>
+          <div class="tool-note">${esc(entry.note)}</div>
+        </div>
+        <div class="tool-size">${fmtBytes(entry.bytes)}</div>
+      </div>`;
+    })
+    .join('');
+}
+
 function toolsView() {
   const snap = state.snapshot;
   const t = state.t;
@@ -894,6 +922,24 @@ function toolsView() {
           )}</div>`
         : `<div class="mt-12">${notice(esc(t('tools.ready', { method: method === 'apatch' ? 'APatch' : 'Magisk' })), 'good', 'check')}</div>`
     }
+  </section>
+
+  <section class="section">
+    <div class="section-head"><div><h2>${esc(t('tools.externalTitle'))}</h2><p>${esc(t('tools.externalText'))}</p></div>
+      ${button(t('tools.externalFetch'), 'install-external', {
+        tone: 'btn-primary',
+        iconName: 'download',
+        disabled: snap.demo || Boolean(state.downloads.external && !['done', 'error'].includes(state.downloads.external.phase)),
+      })}
+    </div>
+    <div class="card">
+      ${externalRows()}
+      <div class="external-progress" data-external-progress>
+        <div class="meter"><span data-external-bar style="width:0%"></span></div>
+        <span class="small dim" data-external-state>${esc(t('tools.externalCount', { present: externalPresentCount(), total: snap.externalPack.length }))}</span>
+      </div>
+      <div class="mt-12">${notice(esc(t('tools.externalNote')), 'warn', 'alert')}</div>
+    </div>
   </section>
 
   <section class="section">
@@ -1836,6 +1882,21 @@ async function handleAction(action, element) {
     case 'launch-toolkit':
       await run(() => api.launchToolkit(), { success: state.t('toast.launched') });
       return;
+    case 'install-external': {
+      state.downloads.external = { phase: 'start', message: state.t('tools.externalFetching'), received: 0, total: null };
+      updateDownloadUI();
+      try {
+        const result = await api.installExternalPack();
+        if (result?.ok) toast(state.t('tools.externalDone'), 'good');
+        else toast(state.t('tools.externalFailed'), 'warn');
+        if (result?.errors?.length) console.warn('external pack errors', result.errors);
+      } catch (error) {
+        toast(error.message || state.t('tools.externalFailed'), 'error');
+      }
+      await refreshSnapshot();
+      render();
+      return;
+    }
     case 'download': {
       const id = element.dataset.id;
       state.downloads[id] = { phase: 'start', message: 'Starting…', received: 0, total: null };
@@ -2216,6 +2277,13 @@ function handleEvent(message) {
 }
 
 function updateDownloadUI() {
+  const external = state.downloads.external;
+  if (external) {
+    const bar = $('[data-external-bar]');
+    const label = $('[data-external-state]');
+    if (bar) bar.style.width = external.phase === 'done' || external.phase === 'skip' ? '100%' : external.total ? `${Math.min(100, Math.round(((external.received || 0) / external.total) * 100))}%` : '35%';
+    if (label) label.textContent = external.message || state.t('tools.externalFetching');
+  }
   for (const [id, progress] of Object.entries(state.downloads)) {
     const card = $(`[data-download-card="${id}"]`);
     if (!card) continue;

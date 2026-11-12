@@ -3,7 +3,10 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
+import crypto from 'node:crypto';
 import AdmZip from 'adm-zip';
+import { createRequire } from 'node:module';
+const require = createRequire(import.meta.url);
 
 const ROOT = process.cwd();
 const stamp = new Date().toISOString().replace(/[:.]/g, '-');
@@ -11,11 +14,14 @@ const BASE = path.join(os.tmpdir(), `matepad-e2e-${stamp}`);
 const DEMO_PROFILE = path.join(BASE, 'demo-profile');
 const REAL_PROFILE = path.join(BASE, 'real-profile');
 const FRESH_PROFILE = path.join(BASE, 'fresh-profile');
+const READY_PROFILE = path.join(BASE, 'ready-profile');
+const READY_WORKSPACE = path.resolve(ROOT, '..', 'dist', 'MatePad-11-Workspace-1.0.0', 'MatePad11');
 const WORKSPACE = path.join(BASE, 'workspace');
 const SHOTS = path.join(ROOT, 'screens', 'e2e');
 fs.mkdirSync(DEMO_PROFILE, { recursive: true });
 fs.mkdirSync(REAL_PROFILE, { recursive: true });
 fs.mkdirSync(FRESH_PROFILE, { recursive: true });
+fs.mkdirSync(READY_PROFILE, { recursive: true });
 fs.mkdirSync(WORKSPACE, { recursive: true });
 fs.mkdirSync(SHOTS, { recursive: true });
 
@@ -107,8 +113,10 @@ async function snap(page) {
   assert.match(magiskCount, /7\s*\/\s*9/);
   await page.locator('#view [data-action="set-method"][data-value="apatch"]').click();
   await page.waitForTimeout(300);
+  assert.equal(await page.locator('#view .ext-row').count(), 5);
+  assert.match(await page.locator('#view').innerText(), /Signed unlock \+ Qualcomm pack/);
   await page.screenshot({ path: path.join(SHOTS, '03-tools.png'), fullPage: false });
-  pass('tool pack method switch recalculates required files (Magisk 7/9)');
+  pass('tool pack method switch recalculates required files (Magisk 7/9) and external pack rows render');
 
   await goto(page, 'device');
   assert.match(await page.locator('h1').innerText(), /Read the tablet/i);
@@ -254,6 +262,12 @@ async function snap(page) {
   assert.ok(fs.statSync(path.join(WORKSPACE, 'tools', 'apks', 'Magisk.apk')).size > 1000000);
   pass('Magisk latest official APK download and hash');
 
+  const apatch = await page.evaluate(() => window.companion.installDownload('apatch'));
+  assert.equal(apatch.ok, true, apatch.error);
+  assert.ok(fs.existsSync(path.join(WORKSPACE, 'tools', 'apks', 'Apatch.apk')));
+  assert.ok(fs.statSync(path.join(WORKSPACE, 'tools', 'apks', 'Apatch.apk')).size > 1000000);
+  pass('APatch latest official APK download and hash');
+
   const zipPath = path.join(BASE, 'tool-pack.zip');
   const zip = new AdmZip();
   const files = {
@@ -262,7 +276,6 @@ async function snap(page) {
     'tools/ptool.exe': 'synthetic ptool',
     'unlock/Huawei865870_devprg.elf': 'synthetic firehose',
     'unlock/Huawei865870_abl_unlock.img': 'synthetic abl',
-    'tools/apks/Apatch.apk': 'synthetic apatch apk',
     'tools/rawprogram/rawprogram0.xml': '<data/>',
   };
   for (const [name, content] of Object.entries(files)) zip.addFile(name, Buffer.from(content));
@@ -274,6 +287,26 @@ async function snap(page) {
   assert.equal(realSnap.inventory.requiredMissing.length, 0, JSON.stringify(realSnap.inventory.requiredMissing.map((i) => i.id)));
   assert.equal(realSnap.inventory.requiredPresent, realSnap.inventory.requiredCount);
   pass('tool-pack ZIP import matches canonical paths; APatch requirements 10/10');
+
+  const externalResult = await page.evaluate(() => window.companion.installExternalPack());
+  assert.equal(externalResult.ok, true, JSON.stringify(externalResult.errors));
+  assert.equal(externalResult.total, 5);
+  const { EXTERNAL_PACK } = require('../src/core/external-pack.js');
+  for (const entry of EXTERNAL_PACK) {
+    for (const rel of entry.destinations) {
+      const file = path.join(WORKSPACE, rel);
+      assert.ok(fs.existsSync(file), `${rel} missing`);
+      assert.equal(fs.statSync(file).size, entry.bytes, `${rel} size`);
+      const hash = crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
+      assert.equal(hash, entry.sha256, `${rel} hash`);
+    }
+  }
+  realSnap = await snap(page);
+  assert.equal(realSnap.externalPack.length, 5);
+  assert.equal(realSnap.inventory.requiredMissing.length, 0);
+  assert.ok(realSnap.inventory.items.find((item) => item.id === 'fh_loader').present);
+  assert.ok(realSnap.inventory.items.find((item) => item.id === 'qcdriver').present);
+  pass('external pack fetch: Drive firehose/ABL, QSahara, fh_loader 23.06, signed driver, all hashes verified');
 
   const imgPath = path.join(BASE, 'magisk_patched_test.img');
   fs.writeFileSync(imgPath, 'synthetic ramdisk');
@@ -382,6 +415,49 @@ async function snap(page) {
   assert.match(await page.locator('#view').innerText(), /Data-wipe acknowledgement recorded/i);
   pass('typed WIPE + backup checkbox records the data-wipe acknowledgement');
 
+  await app.close();
+}
+
+// ---------------------------------------------------------------- ready workspace pass
+{
+  assert.ok(fs.existsSync(READY_WORKSPACE), 'ready workspace missing; run app/scripts/make-workspace.mjs first');
+  fs.writeFileSync(
+    path.join(READY_PROFILE, 'state.json'),
+    JSON.stringify(
+      {
+        version: 1,
+        language: 'en',
+        workspace: READY_WORKSPACE,
+        toolkitMode: 'build',
+        toolkitPath: null,
+        method: 'apatch',
+        demo: false,
+        demoEnabled: false,
+        acknowledgements: { disclaimer: '2026-01-01T00:00:00.000Z', unlockWipe: null },
+        progress: { unlock: { steps: {} }, root: { steps: {} } },
+        hashes: {},
+        build: {},
+        lastDevice: null,
+      },
+      null,
+      2,
+    ),
+  );
+  const { app, page } = await launch(READY_PROFILE, ['--lang=en']);
+  const readySnap = await snap(page);
+  assert.equal(readySnap.demo, false);
+  assert.equal(readySnap.inventory.requiredPresent, 10);
+  assert.equal(readySnap.inventory.requiredMissing.length, 0);
+  for (const id of ['qsahara', 'fh_loader', 'devprg', 'abl_unlock', 'kptools', 'kpimg', 'apatch_apk', 'adbdriver', 'qcdriver']) {
+    assert.ok(readySnap.inventory.items.find((item) => item.id === id)?.present, `${id} should be present`);
+  }
+  assert.equal(readySnap.externalPack.length, 5);
+  assert.ok(fs.existsSync(path.join(READY_WORKSPACE, 'TOOLPACK-MANIFEST.json')));
+  await goto(page, 'tools');
+  await page.screenshot({ path: path.join(SHOTS, '15-tools-ready-workspace.png') });
+  await goto(page, 'prepare');
+  await page.screenshot({ path: path.join(SHOTS, '16-prepare-ready-workspace.png') });
+  pass('ready workspace: 25 files, APatch 10/10, drivers present, manifest verified by the app');
   await app.close();
 }
 

@@ -6,6 +6,7 @@ const { BrowserWindow, shell } = require('electron');
 const { computeReadiness } = require('../core/readiness');
 const { evaluateGates, summarizeGates, routeUnlock } = require('../core/parse');
 const { groupItems, ITEM_BY_ID } = require('../core/inventory');
+const { publicPack } = require('../core/external-pack');
 const { DOWNLOADS, URLS, EXTERNAL_ALLOWLIST, SAFETY_COPY, UPSTREAM } = require('../core/sources');
 const { ensureDir, exists, sha256File } = require('./files');
 const { isSubPath, maskSerial } = require('../core/commands');
@@ -135,6 +136,7 @@ function createIpc({
       route,
       logs: logger.snapshot(350),
       downloads: DOWNLOADS,
+      externalPack: publicPack(),
       urls: URLS,
       upstream: UPSTREAM,
       safety: SAFETY_COPY,
@@ -368,6 +370,13 @@ function createIpc({
     } finally {
       activeDownloads.delete(id);
     }
+  });
+
+  handle('app:install-external', async () => {
+    if (store.isDemo()) throw new Error('Demo mode: turn off the preview to fetch the external pack.');
+    const result = await downloadService.installExternalPack();
+    environment.clear();
+    return result;
   });
 
   handle('app:import-dialog', async ({ mode = 'zip' }, event) => {

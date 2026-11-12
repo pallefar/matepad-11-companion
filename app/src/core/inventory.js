@@ -94,7 +94,7 @@ const ITEMS = [
     priority: 'required',
     neededFor: ['unlock', 'apatch'],
     source: 'user',
-    note: 'Qualcomm Sahara uploader. Proprietary; comes with the original toolkit tool pack.',
+    note: 'Qualcomm Sahara uploader. Supplied from the MiFlash mirror; proprietary, hash-pinned by the external pack.',
   },
   {
     id: 'fh_loader',
@@ -104,7 +104,7 @@ const ITEMS = [
     priority: 'required',
     neededFor: ['unlock', 'apatch'],
     source: 'user',
-    note: 'Qualcomm Firehose loader. Proprietary; comes with the original toolkit tool pack.',
+    note: 'Qualcomm Firehose loader. The supplied 23.06 build supports --skip_configure, --configure, raw XML reads and writes.',
   },
   {
     id: 'ptool',
@@ -195,7 +195,7 @@ const ITEMS = [
     priority: 'recommended',
     neededFor: ['drivers'],
     source: 'user',
-    note: 'Installs the Huawei/Android ADB driver. Windows may already have a working driver.',
+    note: 'ADB driver installer. The supplied pack uses a signed Xiaomi combined installer as a substitute for the author’s file; Windows may already have a driver.',
   },
   {
     id: 'qcdriver',
@@ -205,7 +205,7 @@ const ITEMS = [
     priority: 'recommended',
     neededFor: ['drivers'],
     source: 'user',
-    note: 'Installs the Qualcomm 9008 driver. Required if Device Manager shows QUSB_BULK with a warning.',
+    note: 'Qualcomm 9008 driver installer. The supplied pack uses the same signed Xiaomi combined installer; install it if Device Manager shows QUSB_BULK with a warning.',
   },
   {
     id: 'vbmeta',

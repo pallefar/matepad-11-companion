@@ -11,7 +11,7 @@ This is the procedure the companion guides you through. It assumes **one** MateP
 - [ ] Back up photos and data. Unlock erases the tablet.
 - [ ] Charge above **60%**.
 - [ ] Free at least **40 GB** on the PC (the EDL backup can be ~13 GB).
-- [ ] Obtain the proprietary tool pack (see [TOOL-PACK.md](TOOL-PACK.md)).
+- [ ] Choose a tool source: the preloaded workspace ZIP, the app's **Fetch external pack**, or the original tool pack (see [TOOL-PACK.md](TOOL-PACK.md)).
 - [ ] Disconnect other Android devices and close HiSuite / `hwtransport.exe`.
 
 ## 1. First run
@@ -20,7 +20,8 @@ This is the procedure the companion guides you through. It assumes **one** MateP
 2. Run `MatePad 11 Companion.exe`. Because it is unsigned, SmartScreen may show “Windows protected your PC” → **More info → Run anyway**.
 3. Read the disclaimer, tick the acknowledgement, and continue.
 4. **Prepare**:
-   - Keep or change the workspace (default `C:\Users\<you>\MatePad11`).
+   - **Easiest:** unzip `MatePad-11-Workspace-1.0.0.zip` and point the workspace at its `MatePad11` folder. It already contains the APatch files 10/10.
+   - Or keep the default workspace and use **Tool pack → Fetch external pack** (or import the original pack).
    - Press **Download & build**. The app fetches the current GPL source, installs .NET 8 into the workspace if the PC has no SDK 8, and runs:
 
      ```powershell
@@ -34,13 +35,16 @@ If the build fails, install the [.NET 8 SDK](https://dotnet.microsoft.com/downlo
 
 ## 2. Tool pack
 
-1. Get the original tool pack ZIP/folder.
-2. **Tool pack → Choose ZIP** (or drag it onto the page).
-3. Confirm the required count for your method (APatch 10/10 or Magisk 9/9). The page names anything missing.
-4. Install the drivers if Device Manager needs them: upstream **Driver** page, or `tools/driver/adbdriver.exe` / `qcdriver.exe` from the pack. A reboot may be required.
-5. Optional: **Hash** a row to record its SHA-256; **Reveal** opens the file location.
+1. Use one of:
+   - the preloaded workspace ZIP (all APatch files already placed), or
+   - **Tool pack → Fetch external pack** (signed firehose/ABL, QSaharaServer, fh_loader 23.06, signed driver installer), or
+   - **Tool pack → Choose ZIP/folder** with the original pack.
+2. Confirm the required count for your method (APatch 10/10 or Magisk 9/9). The page names anything missing.
+3. Install the drivers if Device Manager needs them: upstream **Driver** page, or `tools/driver/adbdriver.exe` / `qcdriver.exe`. In the supplied workspace both are the same Authenticode-signed Xiaomi combined installer; the original author's separate installers are preferable if you have them. A reboot may be required.
+4. Optional: **Hash** a row to record its SHA-256; **Reveal** opens the file location.
+5. The optional ROM/downgrade files are still not supplied: `rawprogram*`, `ptool.exe`, `vbmeta.zip`, `misc.img`, `HiSuiteProxy/*`. Unlock and APatch root do not need them.
 
-The app auto-downloads only platform-tools, 7-Zip, Magisk, APatch, and KernelPatch. It never fetches QSaharaServer, fh_loader, the unlock images, drivers, vbmeta, or rawprogram files.
+The app auto-downloads platform-tools, 7-Zip, Magisk, APatch and KernelPatch. **Fetch external pack** adds the pinned QSaharaServer, fh_loader 23.06, the two signed images and the signed driver installer. It still never fetches `vbmeta.zip`, `rawprogram*`, `misc.img`, `ptool.exe` or HiSuite; those are only for ROM flashing/downgrade and come from the original pack or firmware.
 
 ## 3. Connect and read the tablet
 

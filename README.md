@@ -11,7 +11,7 @@ The upstream project is source-only. There is no release, no bundled tool pack, 
 This companion adds the missing layer:
 
 - **Prepare** — detect Windows/.NET, download the GPL source, install .NET 8 per-user if needed, run `dotnet publish`, launch the result.
-- **Provision** — inventory all 27 expected paths from the upstream `AppConfig.cs`, auto-download open tools, import the proprietary pack by ZIP/folder, record hashes.
+- **Provision** — inventory all 27 expected paths, auto-download open tools, **fetch the four signed/Qualcomm files in one step with pinned SHA-256**, or import the original pack. A ready-made workspace ZIP is included with the APatch set already in the exact layout.
 - **Read the device** — model, HarmonyOS version, API, battery, storage, USB authorization, bootloader state, root check, 9008/EDL COM presence.
 - **Route** — HarmonyOS 2/3 gets the ADB → EDL path; HarmonyOS 4 gets the engineering-cable/downgrade path, never the wrong one.
 - **Gate** — DBY-W09 only, battery and disk checks, data-wipe acknowledgement, tool-pack completeness, typed `WIPE` confirmation.
@@ -21,7 +21,7 @@ This companion adds the missing layer:
 ## What it deliberately does not do
 
 - It does **not** implement EDL/9008 writes. Those remain in the upstream `MatePadToolbox`.
-- It does **not** bundle or redistribute the upstream binary, the proprietary Qualcomm/Huawei files, drivers, or unlock images.
+- It does **not** bundle the upstream binary or proprietary device files in the app package. The separate ready-workspace ZIP contains the unlock/APatch set for your own device; that ZIP is not MIT-licensed and must not be redistributed.
 - It does **not** bypass Huawei ID, FRP, or any account/anti-theft control.
 - It does **not** promise that unlocking or rooting is safe. A wrong EDL write can hard-brick the tablet.
 
@@ -29,33 +29,44 @@ This companion adds the missing layer:
 
 | Area | State |
 |---|---|
-| UI and logic | **Verified on macOS**: 34 unit tests, 23 Playwright checks against the real Electron app, EN + 中文, 1440/1120 widths, zero renderer errors |
+| UI and logic | **Verified on macOS**: 37 unit tests, 26 Playwright checks against the real Electron app, EN + 中文, 1440/1120 widths, zero renderer errors |
 | Official downloads | **Verified live**: platform-tools, 7-Zip, KernelPatch (kptools + kpimg), Magisk release, safe ZIP extraction |
-| Tool-pack import | **Verified** with a synthetic pack and a synthetic ramdisk; canonical paths and hash recording confirmed |
+| External pack fetch | **Verified live**: signed firehose + ABL (hashes match the independent guide), QSaharaServer, fh_loader 23.06, signed Xiaomi driver installer; all five entries hash-checked |
+| Ready workspace | **Verified**: 25 files, APatch 10/10, driver entries present, manifest/checksums match; app reads it as ready |
 | Windows package | **Built** (`win32-x64`, unsigned) and inspected, but **not executed** — the agent had no Windows host |
 | .NET install + upstream WinUI build | **Not executed** (Windows-only XAML compiler); the command, logging and failure paths are implemented |
 | Real tablet, EDL write, unlock, root | **Not tested** — no DBY-W09, no proprietary tool pack, no Windows host here |
 
 The app is honest about this in **Settings → About** and in the diagnostics bundle. Treat the Windows-only steps as a runbook that still needs a first real run on your PC.
 
-## The one thing you must supply: the proprietary tool pack
+## The proprietary layer
 
-The upstream repo intentionally omits:
+The upstream repo intentionally omits the signed unlock images, the Qualcomm EDL tools, drivers, and ROM helpers. The companion can now assemble the critical unlock/APatch set for you:
 
-`QSaharaServer.exe`, `fh_loader.exe`, `ptool.exe`, `driver/adbdriver.exe`, `driver/qcdriver.exe`, `unlock/Huawei865870_devprg.elf`, `unlock/Huawei865870_abl_unlock.img`, `tools/rawprogram/*`, `vbmeta/vbmeta.zip`, `HiSuiteProxy/*`, and the signed unlock files.
+- **Fetch external pack** pulls and verifies:
+  - signed firehose `Huawei865870_devprg.elf` (697,648 B) and unlocked ABL `Huawei865870_abl_unlock.img` (602,112 B) from the [independent DBY-W09 guide](https://github.com/serkanvela/matepad11-hos42-root-gms)'s public Drive folder — published SHA-256 matches;
+  - `QSaharaServer.exe` (174,592 B) from a MiFlash mirror;
+  - `fh_loader.exe` (485,888 B, Qualcomm 23.06 build) that advertises `--skip_configure`, `--configure`, `--sendxml`, and raw reads;
+  - an Authenticode-signed Xiaomi combined ADB/Qualcomm driver installer, copied to the two driver slots as a documented substitute for the author's separate installers.
+- **Or import the original tool pack** (preferred when you have it) by ZIP/folder. The app never downloads from random mirrors beyond the pinned sources above.
+- **Or start from the ready workspace ZIP** — every APatch file is already at the exact path; you only build the toolkit.
 
-The companion's **Tool pack → Import** accepts the ZIP or folder you got with the original toolkit and copies recognized files into the exact layout. It never downloads these from mirrors. See **[docs/TOOL-PACK.md](docs/TOOL-PACK.md)** for the full mapping, sourcing rules, and the independent guide's published hashes for the signed firehose/ABL.
+The **optional** leftovers are not needed to unlock or root, and cannot be sourced generically:
 
-**Without this pack the app can prepare everything and read the tablet, but it cannot unlock or root.** The UI says so and blocks the unlock action.
+`tools/rawprogram/*`, `tools/ptool.exe`, `vbmeta/vbmeta.zip`, `misc.img` (ROM flashing/rescue) and `tools/HiSuiteProxy/*` (HarmonyOS 4 downgrade). Add them from the original pack or matching firmware if you plan those operations.
+
+See **[docs/TOOL-PACK.md](docs/TOOL-PACK.md)** for full provenance, hashes and caveats. The third-party binaries remain proprietary and are not covered by this app's MIT license.
 
 ## Quick start on the Windows PC
 
-1. Copy **`dist/MatePad-11-Companion-1.0.0-win-x64.zip`** to the Windows 10/11 x64 PC, unzip it anywhere writable (not `Program Files`).
-2. Run **`MatePad 11 Companion.exe`**. It is unsigned, so SmartScreen may show “Windows protected your PC” → **More info → Run anyway**.
-3. **Prepare** → choose a workspace (default `C:\Users\<you>\MatePad11`) → **Download & build**. The app installs .NET 8 into the workspace if needed, fetches the upstream source, runs `dotnet publish`, and shows the full log.
-4. **Tool pack** → import the proprietary pack, then download the open tools from the official sources. Required file count must be complete for your root method.
+1. Copy **`dist/MatePad-11-Companion-1.0.0-win-x64.zip`** and **`dist/MatePad-11-Workspace-1.0.0.zip`** to the Windows 10/11 x64 PC.
+2. Unzip the app anywhere writable (not `Program Files`). Run **`MatePad 11 Companion.exe`**. It is unsigned, so SmartScreen may show “Windows protected your PC” → **More info → Run anyway**.
+3. Choose the workspace:
+   - **Recommended:** unzip `MatePad-11-Workspace-1.0.0.zip`, then in **Prepare → Change folder** select its `MatePad11` folder. The tool pack is already complete (APatch 10/10); the build writes `MatePadToolbox.exe` into it.
+   - **Fresh workspace:** keep the default folder, then **Tool pack → Fetch external pack**, or import the original pack.
+4. **Prepare → Download & build**. The app installs .NET 8 locally if needed, fetches the GPL source, runs `dotnet publish`, and shows the full log.
 5. **Device** → enable USB debugging, connect a data cable, accept the RSA prompt, press **Detect tablet**. Confirm DBY-W09 and the HarmonyOS branch.
-6. **Unlock** → read the preflight, type `WIPE`, confirm the backup, then **Open toolkit → Unlock BL** and follow the branch-specific steps. Verify with **Check bootloader** (fastboot `unlocked: yes`).
+6. **Unlock** → read the preflight, type `WIPE`, confirm the backup, then **Open toolkit → Unlock BL** and follow the branch-specific steps. Verify with **Check bootloader** (`fastboot getvar unlocked` → `yes`).
 7. **Root** → choose APatch (automated boot patch via 9008) or Magisk (patched ramdisk you provide), follow the steps, then **Verify root** (`adb shell su -c id` → `uid=0(root)`).
 
 Full runbook: **[docs/WINDOWS-RUNBOOK.md](docs/WINDOWS-RUNBOOK.md)**
@@ -94,6 +105,15 @@ Both require an unlocked bootloader. Both have a switch-method control; prerequi
 - Battery above 60%, a data cable directly into the PC, no hub, no sleep during a write.
 - The companion runs only read-only device commands, plus reboot/APK-install actions you explicitly press. Every flash is performed by the upstream toolkit.
 
+## Artifacts
+
+| File | Contents |
+|---|---|
+| `dist/MatePad-11-Companion-1.0.0-win-x64.zip` | Unsigned portable Windows app, docs, licenses. No proprietary device binaries. |
+| `dist/MatePad-11-Workspace-1.0.0.zip` | Preloaded `MatePad11` workspace: platform-tools, 7-Zip, Magisk, APatch, KernelPatch, QSaharaServer, fh_loader 23.06, the two signed unlock images, driver installer, manifest and checksums. For personal use; not MIT. |
+
+SHA-256 values are in `dist/CHECKSUMS.txt` and the adjacent `.sha256` files.
+
 ## Development
 
 ```bash
@@ -101,8 +121,8 @@ cd app
 npm install
 npm start            # real state (macOS/Linux preview; Windows for the full path)
 npm run demo         # simulated DBY-W09, no device commands
-npm test             # 34 node:test checks
-node scripts/e2e.mjs # 23 Playwright checks against the real Electron app
+npm test             # 37 node:test checks
+node scripts/e2e.mjs # 26 Playwright checks against the real Electron app
 npm run pack:win     # win32-x64 folder in ../dist
 ```
 

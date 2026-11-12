@@ -31,6 +31,7 @@ const api = {
   refreshDevice: () => invoke('app:refresh-device'),
   detectEdl: () => invoke('app:detect-edl'),
   installDownload: (id) => invoke('app:install-download', { id }),
+  installExternalPack: () => invoke('app:install-external'),
   importDialog: (mode) => invoke('app:import-dialog', { mode }),
   importPaths: (paths, role) => invoke('app:import-paths', { paths, role }),
   build: (forceSource) => invoke('app:build', { forceSource: Boolean(forceSource) }),
