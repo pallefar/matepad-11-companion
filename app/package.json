@@ -1,0 +1,26 @@
+{
+  "name": "matepad-11-companion",
+  "productName": "MatePad 11 Companion",
+  "version": "1.0.0",
+  "description": "Setup, readiness, unlock and root companion for the Huawei MatePad 11 (DBY-W09).",
+  "main": "main.js",
+  "author": "MatePad 11 Companion",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "demo": "electron . --demo",
+    "test": "node --test test/*.test.js",
+    "shots": "bash scripts/shots.sh",
+    "pack:win": "node scripts/pack.js win32 x64",
+    "pack:mac": "node scripts/pack.js darwin arm64"
+  },
+  "dependencies": {
+    "adm-zip": "^0.5.16"
+  },
+  "devDependencies": {
+    "@electron/packager": "^18.3.6",
+    "electron": "33.4.11",
+    "playwright-core": "^1.55.0"
+  }
+}
