@@ -103,11 +103,15 @@ async function snap(page) {
   assert.match(await page.locator('h1').innerText(), /One step at a time/i);
   assert.equal(await page.locator('.guide-row').count(), 8);
   assert.ok((await page.locator('.guide-support [data-action], .guide-support [data-external]').count()) >= 5);
+  await page.locator('.guide-help summary').click();
+  await page.waitForTimeout(250);
+  assert.match(await page.locator('.guide-help').innerText(), /Common fixes/i);
   await page.screenshot({ path: path.join(SHOTS, '25-guide.png') });
   await page.locator('[data-action="copy-support"]').click();
   await page.waitForTimeout(300);
   assert.match(await page.locator('.toast').last().innerText(), /Support summary copied/i);
   pass('guided setup shows one current step, eight ordered steps and support actions');
+  pass('step help opens with What you should see and Common fixes');
   pass('copy support summary action succeeds');
 
   await page.locator('[data-action="toggle-theme"]').click();
@@ -126,6 +130,8 @@ async function snap(page) {
   assert.equal(await page.locator('#view [data-action="set-theme"][data-value="light"]').getAttribute('aria-pressed'), 'true');
   await page.screenshot({ path: path.join(SHOTS, '20-settings-light.png') });
   await goto(page, 'guide');
+  await page.locator('.guide-help summary').click();
+  await page.waitForTimeout(200);
   await page.screenshot({ path: path.join(SHOTS, '26-guide-light.png') });
   await goto(page, 'device');
   await page.locator('.system-check').screenshot({ path: path.join(SHOTS, '24-system-check-light.png') });

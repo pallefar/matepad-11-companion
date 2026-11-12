@@ -1,4 +1,4 @@
-MatePad 11 Companion 1.1.0 — Windows x64
+MatePad 11 Companion 1.2.0 — Windows x64
 =========================================
 
 1. Unzip this folder somewhere writable (not Program Files).

@@ -1058,7 +1058,7 @@ function toolRow(item, method) {
             disabled: state.snapshot.demo,
           });
   const hashButton = present
-    ? `<button class="btn btn-quiet btn-xs" data-action="hash-item" data-id="${esc(item.id)}" title="${esc(t('common.hash'))}" ${state.snapshot.demo ? 'disabled' : ''}>${icon('hash')}</button>`
+    ? `<button class="btn btn-quiet btn-xs" data-action="hash-item" data-id="${esc(item.id)}" title="${esc(t('common.hash'))}" aria-label="${esc(t('common.hash'))}" ${state.snapshot.demo ? 'disabled' : ''}>${icon('hash')}</button>`
     : '';
   return `<div class="tool-row ${present ? '' : 'is-missing'}">
     ${statusIcon(present ? 'ready' : 'blocked')}
@@ -1393,6 +1393,8 @@ function guideStepDefs() {
   const firstOpen = defs.findIndex((step) => !step.done);
   return defs.map((step, index) => ({
     ...step,
+    what: t(`guide.${step.id}.what`),
+    trouble: t(`guide.${step.id}.trouble`).split('\n').filter(Boolean),
     index,
     current: index === firstOpen,
     status: step.done ? 'pass' : index === firstOpen ? 'attention' : 'pending',
@@ -1454,7 +1456,7 @@ function guideView() {
   const rows = steps
     .map((step) => {
       const attrs = step.action ? `data-action="${esc(step.action)}"` : `data-nav="${esc(step.view)}"`;
-      return `<button class="guide-row ${step.current ? 'is-current' : ''}" ${attrs}>
+      return `<button class="guide-row ${step.current ? 'is-current' : ''}" ${attrs} title="${esc(step.success)}">
         <span class="guide-row-num">${String(step.index + 1).padStart(2, '0')}</span>
         <span class="guide-row-copy"><span class="guide-row-title">${esc(step.title)}</span><span class="guide-row-detail">${esc(step.success)}</span></span>
         ${statusText(step.status)}
@@ -1491,7 +1493,14 @@ function guideView() {
       allDone
         ? ''
         : `<div class="guide-success mt-16">${icon('check')}<div><strong>${esc(t('guide.success'))}</strong><span>${esc(current.success)}</span></div></div>
-           <details class="step-stuck mt-12"><summary>${esc(t('guide.stuck'))}</summary><p>${esc(current.stuck)}</p></details>`
+           <details class="step-stuck guide-help mt-12">
+             <summary>${esc(t('guide.help'))}</summary>
+             <div class="guide-help-body">
+               <div><strong>${esc(t('guide.see'))}</strong><p>${esc(current.what)}</p></div>
+               <div><strong>${esc(t('guide.fixes'))}</strong><ul>${current.trouble.map((item) => `<li>${esc(item)}</li>`).join('')}</ul></div>
+               <div class="mt-12">${linkButton(t('guide.runbook'), `${SUPPORT_REPO}/blob/main/docs/WINDOWS-RUNBOOK.md`, { arrow: true, size: 'btn-sm' })}</div>
+             </div>
+           </details>`
     }
     <div class="mt-16">${allDone ? button(t('guide.export'), 'export-diagnostics', { tone: 'btn-primary', iconName: 'save' }) : currentAction}</div>
   </section>
