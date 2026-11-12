@@ -11,6 +11,7 @@ import {
 const api = window.companion;
 const VIEWS = ['overview', 'guide', 'prepare', 'tools', 'device', 'unlock', 'root', 'console', 'settings'];
 const SUPPORT_REPO = 'https://github.com/pallefar/matepad-11-companion';
+const MACOS_DOC_URL = `${SUPPORT_REPO}/blob/main/docs/MACOS.md`;
 
 const state = {
   snapshot: null,
@@ -559,18 +560,21 @@ function overviewView() {
   </div>`;
 
   const demoCard = !snap.env.isWindows && !snap.demo
-    ? `<div class="card flat" style="border-style:dashed">
+    ? `<div class="card flat mac-card" style="border-style:dashed">
         <div class="row-between">
-          <div><div class="card-title">${icon('eye')}${esc(t('overview.demoTitle'))}</div>
-          <p class="small muted mt-8" style="max-width:520px">${esc(t('overview.demoText'))}</p></div>
-          ${button(t('overview.demoButton'), 'set-demo', { tone: 'btn-ghost', data: { value: 'true' }, iconName: 'play' })}
+          <div><div class="card-title">${icon('help')}${esc(t('mac.title'))}</div>
+          <p class="small muted mt-8" style="max-width:560px">${esc(t('mac.text'))}</p></div>
+          <div class="row" style="gap:8px;flex-wrap:wrap">
+            ${linkButton(t('mac.guide'), MACOS_DOC_URL, { arrow: true, size: 'btn-sm' })}
+            ${button(t('overview.demoButton'), 'set-demo', { tone: 'btn-ghost', data: { value: 'true' }, iconName: 'play' })}
+          </div>
         </div>
       </div>`
     : '';
 
   return `
     ${pageHead({
-      eyebrow: `${esc(t('overview.eyebrow'))}`,
+      eyebrow: `${esc(snap.env.isWindows ? t('overview.eyebrow') : t('overview.eyebrowMac'))}`,
       title: esc(t('overview.title')),
       lede: esc(t('overview.lede')),
       actions: `<button class="btn btn-primary" data-nav="${esc(next?.view || 'prepare')}">${icon('arrowRight')}${esc(
@@ -586,6 +590,8 @@ function overviewView() {
           </div>`
         : ''
     }
+    ${demoCard ? `<section class="section mt-20">${demoCard}</section>` : ''}
+
     <section class="flight">
       <div class="card phase-panel">
         <div class="card-head">
@@ -647,7 +653,6 @@ function overviewView() {
       </div>
     </section>
 
-    ${demoCard ? `<section class="section">${demoCard}</section>` : ''}
 
     <section class="section card flat" style="border-color:var(--line-soft)">
       <div class="row" style="align-items:flex-start">
@@ -1445,6 +1450,7 @@ function guideSupportIssueUrl() {
 
 function guideView() {
   const t = state.t;
+  const snap = state.snapshot;
   const steps = guideStepDefs();
   const done = steps.filter((step) => step.done).length;
   const current = steps.find((step) => step.current) || steps[steps.length - 1];
@@ -1469,6 +1475,7 @@ function guideView() {
     ${linkButton(t('guide.issue'), guideSupportIssueUrl(), { arrow: true, size: 'btn-sm' })}
     ${linkButton(t('guide.runbook'), `${SUPPORT_REPO}/blob/main/docs/WINDOWS-RUNBOOK.md`, { arrow: true, size: 'btn-sm' })}
     ${linkButton(t('guide.toolpack'), `${SUPPORT_REPO}/blob/main/docs/TOOL-PACK.md`, { arrow: true, size: 'btn-sm' })}
+    ${!snap.env.isWindows ? linkButton(t('mac.guide'), MACOS_DOC_URL, { arrow: true, size: 'btn-sm' }) : ''}
   `;
   return `${pageHead({
     eyebrow: esc(t('guide.eyebrow')),

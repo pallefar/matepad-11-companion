@@ -16,7 +16,7 @@ This is the procedure the companion guides you through. It assumes **one** MateP
 
 ## 1. First run
 
-1. Unzip `MatePad-11-Companion-1.2.0-win-x64.zip` into a writable folder. Do not run it from `Program Files`; the app writes builds and backups.
+1. Unzip `MatePad-11-Companion-1.3.0-win-x64.zip` into a writable folder. Do not run it from `Program Files`; the app writes builds and backups.
 2. Run `MatePad 11 Companion.exe`. Because it is unsigned, SmartScreen may show “Windows protected your PC” → **More info → Run anyway**.
 3. Read the disclaimer, tick the acknowledgement, and continue.
 4. **Prepare**:
@@ -135,7 +135,7 @@ The HOS 4.2 write-up linked in the app is a one-device record, not a guarantee f
 | Flashing hangs | Do not unplug. Check the toolkit log; the cable or port is the usual cause. |
 | `fastboot getvar unlocked` says no | You are still locked. Do not root. Re-read the unlock result before another write. |
 | Windows build fails | Open **Console**, export diagnostics; verify .NET 8 SDK and network; retry with a fresh source download. |
-| App shows “Windows only” | You are on macOS/Linux. The build and launch steps require the Windows PC. |
+| App shows “Windows only” | You are on macOS/Linux. The build and launch steps require the Windows PC. See [MACOS.md](MACOS.md) for what works on a Mac and the VM/Boot Camp caveats. |
 
 ## Recovery principle
 

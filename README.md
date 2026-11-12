@@ -10,6 +10,8 @@ A Windows companion for [run2000s/MatePad11_Tool_Kit_GUI](https://github.com/run
 
 The public release contains the **app only**. It does not contain the proprietary Huawei/Qualcomm files or the preloaded workspace ZIP. Use **Tool pack → Fetch external pack** (pinned sources and SHA-256) or import your own legally obtained pack.
 
+**On a Mac?** The guide, downloads and checks run on macOS. The WinUI build, Windows drivers and EDL write still require Windows. Read [docs/MACOS.md](docs/MACOS.md) before planning a Mac-only attempt.
+
 ## Why this exists
 
 The upstream project is source-only. There is no release, no bundled tool pack, and it is a .NET 8 / WinUI 3 build. Its own home screen checks only three files (`adb.exe`, `fastboot.exe`, `7z.exe`) — the unlock images, Qualcomm EDL tools, drivers, APatch tools and ramdisk images are discovered much later, mid-procedure.
@@ -38,7 +40,7 @@ This companion adds the missing layer:
 
 | Area | State |
 |---|---|
-| UI and logic | **Verified on macOS**: 44 unit tests, 32 Playwright checks against the real Electron app, EN + 中文, 1440/1120 widths, zero renderer errors |
+| UI and logic | **Verified on macOS**: 44 unit tests, 33 Playwright checks against the real Electron app, EN + 中文, 1440/1120 widths, zero renderer errors |
 | Official downloads | **Verified live**: platform-tools, 7-Zip, KernelPatch (kptools + kpimg), Magisk release, safe ZIP extraction |
 | External pack fetch | **Verified live**: signed firehose + ABL (hashes match the independent guide), QSaharaServer, fh_loader 23.06, signed Xiaomi driver installer; all five entries hash-checked |
 | Ready workspace | **Verified**: 25 files, APatch 10/10, driver entries present, manifest/checksums match; app reads it as ready |
@@ -68,7 +70,7 @@ See **[docs/TOOL-PACK.md](docs/TOOL-PACK.md)** for full provenance, hashes and c
 
 ## Quick start on the Windows PC
 
-1. Download **`MatePad-11-Companion-1.2.0-win-x64.zip`** from the [latest release](https://github.com/pallefar/matepad-11-companion/releases/latest), or use the ZIP built in this workspace. Copy the app ZIP to the Windows 10/11 x64 PC.
+1. Download **`MatePad-11-Companion-1.3.0-win-x64.zip`** from the [latest release](https://github.com/pallefar/matepad-11-companion/releases/latest), or use the ZIP built in this workspace. Copy the app ZIP to the Windows 10/11 x64 PC.
 2. Unzip the app anywhere writable (not `Program Files`). Run **`MatePad 11 Companion.exe`**. It is unsigned, so SmartScreen may show “Windows protected your PC” → **More info → Run anyway**.
 3. Choose the workspace:
    - **Public release / fresh workspace:** keep the default folder. Open **Tool pack**, press **Fetch external pack**, and download the open tools (platform-tools, 7-Zip, KernelPatch, Magisk, APatch). Or import the original pack if you already have it.
@@ -108,6 +110,7 @@ Both require an unlocked bootloader. Both have a switch-method control; prerequi
 | ![Light overview](docs/img/overview-light.jpg) | ![Light tool pack](docs/img/tools-light.jpg) |
 | ![System check](docs/img/system-check.jpg) | ![System check light](docs/img/system-check-light.jpg) |
 | ![Step by step](docs/img/guide.jpg) | ![Step by step light](docs/img/guide-light.jpg) |
+| ![Mac compatibility](docs/img/mac-card.jpg) | ![System check](docs/img/system-check.jpg) |
 
 ## Safety
 
@@ -122,7 +125,7 @@ Both require an unlocked bootloader. Both have a switch-method control; prerequi
 
 | File | Contents |
 |---|---|
-| `dist/MatePad-11-Companion-1.2.0-win-x64.zip` | Unsigned portable Windows app, docs, licenses. No proprietary device binaries. |
+| `dist/MatePad-11-Companion-1.3.0-win-x64.zip` | Unsigned portable Windows app, docs, licenses. No proprietary device binaries. |
 | `dist/MatePad-11-Workspace-1.0.0.zip` | Preloaded `MatePad11` workspace: platform-tools, 7-Zip, Magisk, APatch, KernelPatch, QSaharaServer, fh_loader 23.06, the two signed unlock images, driver installer, manifest and checksums. For personal use; not MIT. |
 
 SHA-256 values are in `dist/CHECKSUMS.txt` and the adjacent `.sha256` files.
@@ -135,7 +138,7 @@ npm install
 npm start            # real state (macOS/Linux preview; Windows for the full path)
 npm run demo         # simulated DBY-W09, no device commands
 npm test             # 44 node:test checks
-node scripts/e2e.mjs # 32 Playwright checks against the real Electron app
+node scripts/e2e.mjs # 33 Playwright checks against the real Electron app
 npm run pack:win     # win32-x64 folder in ../dist
 ```
 

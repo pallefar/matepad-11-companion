@@ -27,7 +27,7 @@ Coverage:
 
 Result: **44 pass, 0 fail**. All renderer translation keys used literally are present in both `en` and `zh` (476 literal keys checked; dynamic keys spot-checked).
 
-## End-to-end — 32 checks passed
+## End-to-end — 33 checks passed
 
 Command: `cd app && node scripts/e2e.mjs` (Playwright launches the real Electron app).
 
@@ -68,8 +68,9 @@ Live workspace profile (macOS):
 30. Guided setup: one current step, eight ordered steps, support actions; narrow-width and light-mode screenshots pass.
 31. Support summary copy action shows the success toast and completes without renderer errors.
 32. Step help expands to What you should see and Common fixes; light/dark screenshots pass.
+33. macOS compatibility card renders on a live Mac profile and links to docs/MACOS.md.
 
-Result: **32 pass, 0 fail, zero console errors, zero page errors.**
+Result: **33 pass, 0 fail, zero console errors, zero page errors.**
 
 ## Download endpoints actually exercised
 
@@ -88,7 +89,7 @@ Result: **32 pass, 0 fail, zero console errors, zero page errors.**
 ## Windows package
 
 - Built with `electron-packager` for `win32-x64`, Electron 33.4.11, asar, icon.
-- `MatePad 11 Companion.exe` is a PE32+ x86-64 GUI executable; `resources/app.asar` is about 686 KB and contains only runtime files (`main.js`, `preload.js`, `src/**`, `node_modules/adm-zip`, licenses, README-FIRST). Tests, scripts, screenshots, docs, and build assets are excluded.
+- `MatePad 11 Companion.exe` is a PE32+ x86-64 GUI executable; `resources/app.asar` is about 687 KB and contains only runtime files (`main.js`, `preload.js`, `src/**`, `node_modules/adm-zip`, licenses, README-FIRST). Tests, scripts, screenshots, docs, and build assets are excluded.
 - A macOS asar build from the same configuration was launched with Playwright: title, Overview, six phases, zero renderer errors. This validates asar packaging, not the Windows binary.
 - The ready workspace ZIP was built separately (25 files, 37.9 MiB expanded / 24.9 MiB ZIP) and validated against the app inventory and its own manifest.
 - The final app ZIP is rebuilt after the external-pack feature; see `dist/CHECKSUMS.txt` for its SHA-256.
@@ -128,4 +129,4 @@ The E2E summary JSON (check list + zero errors) is written under the OS temp dir
 
 ## Artifact
 
-`dist/MatePad-11-Companion-1.2.0-win-x64.zip` contains the unsigned Windows x64 folder build and the user docs. SHA-256 values for the ZIP and the executable are in `dist/CHECKSUMS.txt` and `dist/MatePad-11-Companion-1.2.0-win-x64.zip.sha256`.
+`dist/MatePad-11-Companion-1.3.0-win-x64.zip` contains the unsigned Windows x64 folder build and the user docs. SHA-256 values for the ZIP and the executable are in `dist/CHECKSUMS.txt` and `dist/MatePad-11-Companion-1.3.0-win-x64.zip.sha256`.

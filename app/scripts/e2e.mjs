@@ -290,6 +290,12 @@ async function snap(page) {
   assert.equal(realSnap.demo, false);
   assert.equal(realSnap.env.isWindows, false);
   assert.ok(realSnap.inventory.requiredMissing.length > 0);
+  await goto(page, 'overview');
+  assert.equal(await page.locator('.mac-card').count(), 1);
+  const macLink = page.locator('.mac-card [data-external*="MACOS.md"]');
+  assert.equal(await macLink.count(), 1);
+  await page.screenshot({ path: path.join(SHOTS, '27-mac-card.png') });
+  pass('macOS compatibility card renders and links to MACOS.md');
 
   await goto(page, 'prepare');
   const buildButton = page.locator('#view [data-action="build"]');

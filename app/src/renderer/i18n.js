@@ -52,6 +52,9 @@ export const STRINGS = {
     'common.freeSpace': 'free',
 
 
+    'mac.title': 'Using this Mac?',
+    'mac.text': 'The guide, downloads and checks work here. The WinUI build, Windows drivers and EDL write need Windows. Read the Mac notes, or try the flow with simulated data.',
+    'mac.guide': 'Mac compatibility notes',
     'nav.guide': 'Step by step',
     'overview.stepByStep': 'Step-by-step guide',
     'guide.eyebrow': 'GUIDED SETUP',
@@ -151,6 +154,8 @@ export const STRINGS = {
     'topbar.console': 'Open console',
 
     'overview.eyebrow': 'DBY-W09 · WINDOWS 10/11 X64',
+    'overview.eyebrowMac': 'DBY-W09 · macOS 预览 — 写入需要 Windows',
+    'overview.eyebrowMac': 'DBY-W09 · macOS PREVIEW — WRITES NEED WINDOWS',
     'overview.title': 'Stock to rooted, without guessing.',
     'overview.lede': 'The upstream toolkit does the flashing. This companion makes sure the PC, the exact files it expects, and the tablet are ready first — and tells you the truth when they are not.',
     'overview.primary': 'Continue to {step}',
@@ -640,6 +645,9 @@ export const STRINGS = {
     'common.freeSpace': '可用',
 
 
+    'mac.title': '在这台 Mac 上使用？',
+    'mac.text': '指南、下载和检查可以在这台 Mac 上运行。WinUI 构建、Windows 驱动和 EDL 写入仍需要 Windows。请阅读 Mac 说明，或先用模拟数据体验流程。',
+    'mac.guide': 'Mac 兼容说明',
     'nav.guide': '分步指导',
     'overview.stepByStep': '分步指导',
     'guide.eyebrow': '分步设置',
