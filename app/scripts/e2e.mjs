@@ -225,7 +225,9 @@ async function snap(page) {
   await goto(page, 'settings');
   assert.equal(await page.locator('.update-card').count(), 1);
   assert.match(await page.locator('.update-card').innerText(), /Current version/i);
-  pass('App updates card renders current/latest version and check control');
+  assert.equal(await page.locator('[data-update-top]').count(), 1);
+  assert.ok((await page.locator('[data-update-top]').getAttribute('aria-label'))?.length > 0);
+  pass('App updates card and top-corner status render current/latest/check control');
   await page.locator('#view [data-action="set-language"][data-value="zh"]').click();
   await page.waitForTimeout(500);
   assert.equal(await page.locator('html').getAttribute('lang'), 'zh-CN');

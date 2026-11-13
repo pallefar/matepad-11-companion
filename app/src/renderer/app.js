@@ -373,6 +373,72 @@ function render({ preserveScroll = true, focus = false } = {}) {
   }
 }
 
+
+function updateTopMarkup() {
+  const snap = state.snapshot;
+  const t = state.t;
+  const update = snap?.update;
+  const progress = state.updateProgress || snap?.updateProgress;
+  if (update?.available) {
+    const label = progress?.phase === 'download'
+      ? `${t('update.downloading')} ${progress.percent ?? ''}%`
+      : t('update.available', { version: update.latest });
+    return `<button class="chip is-warn update-chip" data-action="top-update" data-update-top title="${esc(label)}" aria-label="${esc(label)}">${icon('download')}<span class="update-chip-text" data-update-text>${esc(label)}</span><span class="update-dot is-warn"></span></button>`;
+  }
+  const checking = state.updateChecking || progress?.phase === 'download';
+  const label = checking
+    ? t('update.checking')
+    : update
+      ? t('update.upToDate')
+      : t('update.check');
+  return `<button class="icon-btn update-btn ${checking ? 'is-checking' : ''}" data-action="top-update" data-update-top title="${esc(label)}" aria-label="${esc(label)}">${icon('refresh')}<span class="update-dot ${checking ? 'is-checking' : update ? 'is-current' : 'is-unknown'}"></span></button>`;
+}
+
+function refreshUpdateTop() {
+  const button = document.querySelector('[data-update-top]');
+  if (!button) return;
+  const snap = state.snapshot;
+  const t = state.t;
+  const update = snap?.update;
+  const progress = state.updateProgress || snap?.updateProgress;
+  if (update?.available && button.classList.contains('update-chip')) {
+    const text = progress?.phase === 'download'
+      ? `${t('update.downloading')} ${progress.percent ?? ''}%`
+      : t('update.available', { version: update.latest });
+    button.title = text;
+    button.setAttribute('aria-label', text);
+    const label = button.querySelector('[data-update-text]');
+    if (label) label.textContent = text;
+    return;
+  }
+  const checking = state.updateChecking || progress?.phase === 'download';
+  const label = checking
+    ? t('update.checking')
+    : update
+      ? t('update.upToDate')
+      : t('update.check');
+  button.title = label;
+  button.setAttribute('aria-label', label);
+  button.classList.toggle('is-checking', Boolean(checking));
+  const dot = button.querySelector('.update-dot');
+  if (dot) dot.className = `update-dot ${checking ? 'is-checking' : update ? 'is-current' : 'is-unknown'}`;
+}
+
+async function checkForUpdates({ notify = true } = {}) {
+  if (state.updateChecking) return null;
+  state.updateChecking = true;
+  render();
+  const result = await run(() => api.checkUpdate(), { success: '' });
+  state.updateChecking = false;
+  if (result?.update) {
+    state.snapshot.update = result.update;
+    if (notify) toast(result.update.available ? state.t('update.available', { version: result.update.latest }) : state.t('update.upToDate'), 'good');
+  }
+  await refreshSnapshot();
+  render();
+  return result;
+}
+
 function renderChrome() {
   const snap = state.snapshot;
   const t = state.t;
@@ -463,7 +529,9 @@ function renderChrome() {
     )}" aria-label="${esc(snap.state.theme === 'light' ? t('topbar.themeDark') : t('topbar.themeLight'))}">${icon(
       snap.state.theme === 'light' ? 'moon' : 'sun',
     )}</button>
-    <button class="icon-btn" data-nav="console" title="${esc(t('topbar.console'))}" aria-label="${esc(t('topbar.console'))}">${icon('console')}</button>`;
+    <button class="icon-btn" data-nav="console" title="${esc(t('topbar.console'))}" aria-label="${esc(t('topbar.console'))}">${icon('console')}</button>
+    ${updateTopMarkup()}`;
+  refreshUpdateTop();
 
   $('#demo-strip').innerHTML = demo
     ? `<div class="demo-strip"><strong>${esc(t('topbar.demo'))}</strong><span>${esc(
@@ -2591,16 +2659,16 @@ async function handleAction(action, element) {
     case 'open-update':
       navigate('settings');
       return;
-    case 'check-update': {
-      state.updateChecking = true;
-      render();
-      const result = await run(() => api.checkUpdate());
-      state.updateChecking = false;
-      if (result?.update) state.snapshot.update = result.update;
-      await refreshSnapshot();
-      render();
+    case 'top-update':
+      if (snap.update?.available || state.updateProgress || state.updateChecking) {
+        navigate('settings');
+        return;
+      }
+      await checkForUpdates();
       return;
-    }
+    case 'check-update':
+      await checkForUpdates();
+      return;
     case 'install-update': {
       if (!snap.update?.available) return;
       if (!snap.update.installSupported || !snap.update.asset) {
@@ -2919,6 +2987,7 @@ function handleEvent(message) {
     if (bar) bar.style.width = `${Math.max(2, Math.min(100, message.payload?.percent || 4))}%`;
     const label = document.querySelector('[data-update-state]');
     if (label) label.textContent = updateProgressLabel(message.payload);
+    refreshUpdateTop();
     return;
   }
   if (message.type === 'build-progress') {

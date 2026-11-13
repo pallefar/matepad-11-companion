@@ -16,7 +16,7 @@ This is the procedure the companion guides you through. It assumes **one** MateP
 
 ## 1. First run
 
-1. Unzip `MatePad-11-Companion-1.5.1-win-x64.zip` into a writable folder. Do not run it from `Program Files`; the app writes builds and backups.
+1. Unzip `MatePad-11-Companion-1.5.2-win-x64.zip` into a writable folder. Do not run it from `Program Files`; the app writes builds and backups.
 2. Run `MatePad 11 Companion.exe`. Because it is unsigned, SmartScreen may show “Windows protected your PC” → **More info → Run anyway**.
 3. Read the disclaimer, tick the acknowledgement, and continue.
 4. **Prepare**:

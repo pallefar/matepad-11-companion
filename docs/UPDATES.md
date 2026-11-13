@@ -15,7 +15,7 @@ The update is explicit: **Check for updates** then **Download & install**. Nothi
 
 ## Where to find it
 
-**Settings → App updates** shows:
+The **top-right update button** always shows the state (available / up to date / not checked). **Settings → App updates** shows:
 
 - current version
 - latest release

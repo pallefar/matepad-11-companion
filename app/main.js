@@ -18,7 +18,7 @@ const { createIpc } = require('./src/main/ipc');
 const { seedDemoLogsIfNeeded } = require('./src/main/demo-logs');
 const { ensureDir } = require('./src/main/files');
 
-const VERSION = '1.5.1';
+const VERSION = '1.5.2';
 const APP_NAME = 'MatePad 11 Companion';
 
 function parseArgs(argv) {

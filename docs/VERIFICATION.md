@@ -70,7 +70,7 @@ Live workspace profile (macOS):
 32. Step help expands to What you should see and Common fixes; light/dark screenshots pass.
 33. macOS compatibility card renders on a live Mac profile and links to docs/MACOS.md.
 34. EDL backup scanner records a folder with images + GPT/XML and unlocks the backup gate; the copied support summary clearly says demo/simulated and no commands were run.
-35. App updates card renders current/latest version and check control on the demo profile.
+35. App updates card and the persistent top-corner status button render current/latest/check control on the demo profile.
 
 Result: **35 pass, 0 fail, zero console errors, zero page errors.**
 
@@ -91,7 +91,7 @@ Result: **35 pass, 0 fail, zero console errors, zero page errors.**
 ## Windows package
 
 - Built with `electron-packager` for `win32-x64`, Electron 33.4.11, asar, icon.
-- `MatePad 11 Companion.exe` is a PE32+ x86-64 GUI executable; `resources/app.asar` is about 723 KB and contains only runtime files (`main.js`, `preload.js`, `src/**`, `node_modules/adm-zip`, licenses, README-FIRST). Tests, scripts, screenshots, docs, and build assets are excluded.
+- `MatePad 11 Companion.exe` is a PE32+ x86-64 GUI executable; `resources/app.asar` is about 727 KB and contains only runtime files (`main.js`, `preload.js`, `src/**`, `node_modules/adm-zip`, licenses, README-FIRST). Tests, scripts, screenshots, docs, and build assets are excluded.
 - A macOS asar build from the same configuration was launched with Playwright: title, Overview, six phases, zero renderer errors. This validates asar packaging, not the Windows binary.
 - The ready workspace ZIP was built separately (25 files, 37.9 MiB expanded / 24.9 MiB ZIP) and validated against the app inventory and its own manifest.
 - The final app ZIP is rebuilt after the external-pack feature; see `dist/CHECKSUMS.txt` for its SHA-256.
@@ -131,7 +131,7 @@ The E2E summary JSON (check list + zero errors) is written under the OS temp dir
 
 ## Artifact
 
-`dist/MatePad-11-Companion-1.5.1-win-x64.zip` contains the unsigned Windows x64 folder build and the user docs. SHA-256 values for the ZIP and the executable are in `dist/CHECKSUMS.txt` and `dist/MatePad-11-Companion-1.5.1-win-x64.zip.sha256`.
+`dist/MatePad-11-Companion-1.5.2-win-x64.zip` contains the unsigned Windows x64 folder build and the user docs. SHA-256 values for the ZIP and the executable are in `dist/CHECKSUMS.txt` and `dist/MatePad-11-Companion-1.5.2-win-x64.zip.sha256`.
 
 ## App updater
 
