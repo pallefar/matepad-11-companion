@@ -13,7 +13,7 @@ The companion is an Electron app and runs on macOS. **The unlock/root workflow i
 
 | Area | Works? | Notes |
 |---|---|---|
-| Companion UI, Step by step, support panel | Yes | Tested on macOS; 46 unit / 34 Playwright checks |
+| Companion UI, Step by step, support panel | Yes | Tested on macOS; 50 unit / 35 Playwright checks |
 | Tool-pack inventory, imports and downloads | Yes | Open tools and the external pack can be downloaded and hash-checked |
 | `adb` and `fastboot` commands | Yes | Real commands were executed during macOS verification |
 | Device passport, battery, OS, apps via adb | Yes, if authorized | No Windows driver check |

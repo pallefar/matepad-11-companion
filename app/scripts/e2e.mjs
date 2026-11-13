@@ -223,6 +223,9 @@ async function snap(page) {
   pass('console renders and filters logs');
 
   await goto(page, 'settings');
+  assert.equal(await page.locator('.update-card').count(), 1);
+  assert.match(await page.locator('.update-card').innerText(), /Current version/i);
+  pass('App updates card renders current/latest version and check control');
   await page.locator('#view [data-action="set-language"][data-value="zh"]').click();
   await page.waitForTimeout(500);
   assert.equal(await page.locator('html').getAttribute('lang'), 'zh-CN');

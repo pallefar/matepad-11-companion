@@ -8,7 +8,7 @@ Proprietary tool pack: **none** (a synthetic pack was used)
 
 This file records what actually ran. It is deliberately narrower than “the app works on Windows”.
 
-## Automated unit tests — 46 passed
+## Automated unit tests — 50 passed
 
 Command: `cd app && npm test`
 
@@ -25,9 +25,9 @@ Coverage:
 - System-check parsers: adb/fastboot versions, package list, Magisk/APatch/KernelSU, developer settings, su, Windows PnP classification, summary states.
 - EDL PowerShell JSON parsing (object/array/prefixed/BOM-less), COM extraction.
 
-Result: **46 pass, 0 fail**. All renderer translation keys used literally are present in both `en` and `zh` (500 literal keys checked; dynamic keys spot-checked).
+Result: **50 pass, 0 fail**. All renderer translation keys used literally are present in both `en` and `zh` (519 literal keys checked; dynamic keys spot-checked).
 
-## End-to-end — 34 checks passed
+## End-to-end — 35 checks passed
 
 Command: `cd app && node scripts/e2e.mjs` (Playwright launches the real Electron app).
 
@@ -70,8 +70,9 @@ Live workspace profile (macOS):
 32. Step help expands to What you should see and Common fixes; light/dark screenshots pass.
 33. macOS compatibility card renders on a live Mac profile and links to docs/MACOS.md.
 34. EDL backup scanner records a folder with images + GPT/XML and unlocks the backup gate; the copied support summary clearly says demo/simulated and no commands were run.
+35. App updates card renders current/latest version and check control on the demo profile.
 
-Result: **34 pass, 0 fail, zero console errors, zero page errors.**
+Result: **35 pass, 0 fail, zero console errors, zero page errors.**
 
 ## Download endpoints actually exercised
 
@@ -90,7 +91,7 @@ Result: **34 pass, 0 fail, zero console errors, zero page errors.**
 ## Windows package
 
 - Built with `electron-packager` for `win32-x64`, Electron 33.4.11, asar, icon.
-- `MatePad 11 Companion.exe` is a PE32+ x86-64 GUI executable; `resources/app.asar` is about 701 KB and contains only runtime files (`main.js`, `preload.js`, `src/**`, `node_modules/adm-zip`, licenses, README-FIRST). Tests, scripts, screenshots, docs, and build assets are excluded.
+- `MatePad 11 Companion.exe` is a PE32+ x86-64 GUI executable; `resources/app.asar` is about 723 KB and contains only runtime files (`main.js`, `preload.js`, `src/**`, `node_modules/adm-zip`, licenses, README-FIRST). Tests, scripts, screenshots, docs, and build assets are excluded.
 - A macOS asar build from the same configuration was launched with Playwright: title, Overview, six phases, zero renderer errors. This validates asar packaging, not the Windows binary.
 - The ready workspace ZIP was built separately (25 files, 37.9 MiB expanded / 24.9 MiB ZIP) and validated against the app inventory and its own manifest.
 - The final app ZIP is rebuilt after the external-pack feature; see `dist/CHECKSUMS.txt` for its SHA-256.
@@ -130,7 +131,11 @@ The E2E summary JSON (check list + zero errors) is written under the OS temp dir
 
 ## Artifact
 
-`dist/MatePad-11-Companion-1.4.0-win-x64.zip` contains the unsigned Windows x64 folder build and the user docs. SHA-256 values for the ZIP and the executable are in `dist/CHECKSUMS.txt` and `dist/MatePad-11-Companion-1.4.0-win-x64.zip.sha256`.
+`dist/MatePad-11-Companion-1.5.0-win-x64.zip` contains the unsigned Windows x64 folder build and the user docs. SHA-256 values for the ZIP and the executable are in `dist/CHECKSUMS.txt` and `dist/MatePad-11-Companion-1.5.0-win-x64.zip.sha256`.
+
+## App updater
+
+The updater checks the latest published GitHub release, selects `MatePad-11-Companion-<version>-win-x64.zip`, verifies the GitHub asset SHA-256 (falling back to the release `.sha256`) and self-replaces only on a packaged Windows build. Mac/dev builds link to the release page. Unit tests cover version comparison, asset selection, trusted URLs and release metadata; the UI card is covered by E2E. The PowerShell folder-swap helper has **not** been executed on Windows in this session.
 
 ## Accessibility audit
 

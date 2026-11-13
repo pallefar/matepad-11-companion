@@ -26,6 +26,8 @@ const state = {
   backupScan: null,
   backupConfirm: false,
   backupBusy: false,
+  updateChecking: false,
+  updateProgress: null,
   consoleFilter: 'all',
   consoleQuery: '',
   autoscroll: true,
@@ -412,6 +414,8 @@ function renderChrome() {
               badge = `<span class="nav-badge">✓</span>`;
             } else if (id === 'root' && snap.readiness.rooted) {
               badge = `<span class="nav-badge">✓</span>`;
+            } else if (id === 'settings' && snap.update?.available) {
+              badge = '<span class="nav-badge is-warn">↑</span>';
             } else if (step && ['blocked', 'attention'].includes(step.status) && !['overview', 'device'].includes(id)) {
               badge = `<span class="nav-badge is-bad">!</span>`;
             }
@@ -564,6 +568,16 @@ function overviewView() {
     <div class="env-row"><span class="label">${esc(t('overview.freeSpace'))}</span><span class="value">${fmtGb(snap.env.freeBytes)}</span></div>
   </div>`;
 
+  const updateBanner = snap.update?.available
+    ? `<div class="notice good mt-20">${icon('download')}<div><strong>${esc(
+        t('update.available', { version: snap.update.latest }),
+      )}</strong><div class="small">${esc(t('update.note'))}</div></div>${button(t('update.open'), 'open-update', {
+        tone: 'btn-ghost',
+        size: 'btn-sm',
+        iconName: 'arrowRight',
+      })}</div>`
+    : '';
+
   const demoCard = !snap.env.isWindows && !snap.demo
     ? `<div class="card flat mac-card" style="border-style:dashed">
         <div class="row-between">
@@ -596,6 +610,7 @@ function overviewView() {
         : ''
     }
     ${demoCard ? `<section class="section mt-20">${demoCard}</section>` : ''}
+    ${updateBanner}
 
     <section class="flight">
       <div class="card phase-panel">
@@ -2144,6 +2159,58 @@ function consoleView() {
 
 /* ============================ settings ============================ */
 
+
+function updateProgressLabel(progress) {
+  if (!progress) return '';
+  if (progress.phase === 'starting') return state.t('update.restarting');
+  if (progress.phase === 'verified') return state.t('update.verified');
+  if (progress.phase === 'download') {
+    return progress.percent != null ? `${state.t('update.downloading')} ${progress.percent}%` : state.t('update.downloading');
+  }
+  return '';
+}
+
+function updateCard() {
+  const snap = state.snapshot;
+  const t = state.t;
+  const update = snap.update;
+  const progress = state.updateProgress || snap.updateProgress;
+  const available = Boolean(update?.available);
+  const canSelfUpdate = Boolean(update?.installSupported && update?.asset);
+  const busy = state.updateChecking || progress?.phase === 'download' || progress?.phase === 'starting';
+  const statusBadge = available
+    ? badge(t('update.availableBadge'), 'warn')
+    : update
+      ? badge(t('update.upToDate'), 'good')
+      : badge(t('update.notChecked'), '');
+  const action = available
+    ? canSelfUpdate
+      ? button(t('update.install'), 'install-update', { tone: 'btn-primary', size: 'btn-sm', iconName: 'download', disabled: busy })
+      : linkButton(t('update.openRelease'), update.releaseUrl, { arrow: true, size: 'btn-sm' })
+    : '';
+  return `<div class="card update-card">
+    ${cardTitle('refresh', t('update.title'), statusBadge)}
+    <div class="env-list">
+      <div class="env-row"><span class="label">${esc(t('update.currentVersion'))}</span><span class="value mono">${esc(snap.app.version)}</span></div>
+      <div class="env-row"><span class="label">${esc(t('update.latest'))}</span><span class="value mono">${esc(update?.latest || '—')}</span></div>
+      <div class="env-row"><span class="label">${esc(t('update.notes'))}</span><span class="value">${esc(update?.checkedAt ? fmtDate(update.checkedAt) : t('update.notChecked'))}</span></div>
+    </div>
+    ${available ? notice(esc(t('update.available', { version: update.latest })), 'good', 'download') : ''}
+    ${update?.notes ? `<details class="disclosure mt-12"><summary>${esc(t('update.notes'))}</summary><div class="disclosure-body"><pre class="release-notes">${esc(update.notes)}</pre></div></details>` : ''}
+    ${
+      progress && ['download', 'starting', 'verified'].includes(progress.phase)
+        ? `<div class="mt-12"><div class="meter"><span data-update-bar style="width:${Math.max(2, Math.min(100, progress.percent || 4))}%"></span></div><div class="small dim mt-8" data-update-state>${esc(updateProgressLabel(progress))}</div></div>`
+        : ''
+    }
+    <div class="row mt-12" style="gap:8px;flex-wrap:wrap">
+      ${button(state.updateChecking ? t('update.checking') : t('update.check'), 'check-update', { tone: 'btn-ghost', size: 'btn-sm', iconName: 'refresh', disabled: state.updateChecking })}
+      ${action}
+    </div>
+    <div class="small dim mt-8">${esc(canSelfUpdate || !available ? t('update.note') : t('update.unsupported'))}</div>
+  </div>`;
+}
+
+
 function settingsView() {
   const snap = state.snapshot;
   const t = state.t;
@@ -2167,6 +2234,7 @@ function settingsView() {
           </div>
         </div>
       </div>
+      ${updateCard()}
       <div class="card">
         ${cardTitle('settings', t('settings.language'))}
         <div class="setting-row">
@@ -2520,6 +2588,40 @@ async function handleAction(action, element) {
       document.getElementById('guide-support')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       return;
     }
+    case 'open-update':
+      navigate('settings');
+      return;
+    case 'check-update': {
+      state.updateChecking = true;
+      render();
+      const result = await run(() => api.checkUpdate());
+      state.updateChecking = false;
+      if (result?.update) state.snapshot.update = result.update;
+      await refreshSnapshot();
+      render();
+      return;
+    }
+    case 'install-update': {
+      if (!snap.update?.available) return;
+      if (!snap.update.installSupported || !snap.update.asset) {
+        if (snap.update.releaseUrl) await run(() => api.openExternal(snap.update.releaseUrl));
+        return;
+      }
+      if (!window.confirm(state.t('update.confirm'))) return;
+      state.updateProgress = { phase: 'starting', percent: null };
+      render();
+      const result = await run(() => api.installUpdate());
+      if (result?.ok && result.restarting) {
+        toast(state.t('update.restarting'), 'good');
+        return;
+      }
+      if (result?.supported === false && result.releaseUrl) await run(() => api.openExternal(result.releaseUrl));
+      if (!result) {
+        state.updateProgress = null;
+        render();
+      }
+      return;
+    }
     case 'choose-backup': {
       if (snap.demo) return;
       const result = await api.chooseBackup();
@@ -2809,6 +2911,14 @@ function handleEvent(message) {
   if (message.type === 'download-progress') {
     state.downloads[message.payload.id] = message.payload;
     updateDownloadUI();
+    return;
+  }
+  if (message.type === 'update-progress') {
+    state.updateProgress = message.payload;
+    const bar = document.querySelector('[data-update-bar]');
+    if (bar) bar.style.width = `${Math.max(2, Math.min(100, message.payload?.percent || 4))}%`;
+    const label = document.querySelector('[data-update-state]');
+    if (label) label.textContent = updateProgressLabel(message.payload);
     return;
   }
   if (message.type === 'build-progress') {

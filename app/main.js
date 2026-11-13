@@ -9,6 +9,7 @@ const { createEnvironmentService } = require('./src/main/environment');
 const { createInventoryService } = require('./src/main/inventory-service');
 const { createDeviceService } = require('./src/main/device');
 const { createChecksService } = require('./src/main/checks');
+const { createUpdaterService } = require('./src/main/updater');
 const { createEdlService } = require('./src/main/edl');
 const { createDownloadService } = require('./src/main/downloads');
 const { createImportService } = require('./src/main/importer');
@@ -17,7 +18,7 @@ const { createIpc } = require('./src/main/ipc');
 const { seedDemoLogsIfNeeded } = require('./src/main/demo-logs');
 const { ensureDir } = require('./src/main/files');
 
-const VERSION = '1.4.0';
+const VERSION = '1.5.0';
 const APP_NAME = 'MatePad 11 Companion';
 
 function parseArgs(argv) {
@@ -217,6 +218,7 @@ app.whenReady().then(async () => {
   const inventoryService = createInventoryService({ store, logger });
   const deviceService = createDeviceService({ store, logger, environment });
   const checksService = createChecksService({ store, logger, environment });
+  const updaterService = createUpdaterService({ app, logger, isDemo: () => store.get().demo });
   const edlService = createEdlService({ store, logger });
   const downloadService = createDownloadService({ store, logger });
   const importService = createImportService({ store, logger });
@@ -231,13 +233,14 @@ app.whenReady().then(async () => {
     inventoryService,
     deviceService,
     checksService,
+    updaterService,
     edlService,
     downloadService,
     importService,
     builderService,
     version: VERSION,
   });
-  services = { store, logger, environment, inventoryService, deviceService, checksService, edlService, downloadService, importService, builderService, ipc };
+  services = { store, logger, environment, inventoryService, deviceService, checksService, updaterService, edlService, downloadService, importService, builderService, ipc };
   seedDemoLogsIfNeeded(store, logger);
   logger.info('app', `${APP_NAME} ${VERSION} starting on ${process.platform}`);
 

@@ -24,6 +24,7 @@ function createIpc({
   inventoryService,
   deviceService,
   checksService,
+  updaterService,
   edlService,
   downloadService,
   importService,
@@ -32,6 +33,7 @@ function createIpc({
 }) {
   let lastEdl = null;
   let lastChecks = null;
+  let lastUpdate = null;
   let lastBuildProgress = null;
   let activeDownloads = new Map();
   let bootstrapped = false;
@@ -53,6 +55,10 @@ function createIpc({
   builderService.setProgressSink((progress) => {
     lastBuildProgress = { ...progress, at: Date.now() };
     sendToAll('app:event', { type: 'build-progress', payload: lastBuildProgress });
+  });
+
+  updaterService.setProgressSink((progress) => {
+    sendToAll('app:event', { type: 'update-progress', payload: progress });
   });
 
   function sanitizeDevice(device) {
@@ -163,6 +169,8 @@ function createIpc({
       edl,
       systemChecks: checks,
       systemCheckRunning: checksService.isRunning(),
+      update: lastUpdate || updaterService.getCached(),
+      updateProgress: updaterService.getProgress(),
       fastboot: deviceService.getLastFastboot(),
       readiness: { ...readiness, canUnlock: readiness.canUnlock && gates.canProceed, canRoot: readiness.canRoot && rootGates.canProceed },
       gates,
@@ -226,6 +234,13 @@ function createIpc({
         broadcastSnapshot().catch((error) => logger.error('ipc', `snapshot after checks failed: ${error.message}`));
       })
       .catch((error) => logger.warn('checks', `System check failed: ${error.message}`));
+    updaterService
+      .check()
+      .then((info) => {
+        lastUpdate = info;
+        broadcastSnapshot().catch((error) => logger.error('ipc', `snapshot after update check failed: ${error.message}`));
+      })
+      .catch((error) => logger.warn('update', `Update check failed: ${error.message}`));
     return initialSnapshot;
   }
 
@@ -458,6 +473,21 @@ function createIpc({
     const backup = store.acknowledgeBackup(scan);
     logger.good('backup', `Backup recorded: ${backup.imageCount} images, ${backup.gptCount} GPT/XML, ${formatBytes(backup.totalBytes)}.`);
     return { backup };
+  });
+
+  handle('app:check-update', async () => {
+    const info = await updaterService.check({ force: true });
+    lastUpdate = info;
+    return { update: info };
+  });
+
+  handle('app:install-update', async () => {
+    const result = await updaterService.install();
+    if (result?.restarting) {
+      logger.good('update', 'App will quit and restart through the update helper.');
+      setTimeout(() => app.quit(), 1200);
+    }
+    return result;
   });
 
   handle('app:detect-edl', async () => {
