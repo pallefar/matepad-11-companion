@@ -72,7 +72,7 @@ See **[docs/TOOL-PACK.md](docs/TOOL-PACK.md)** for full provenance, hashes and c
 
 ## Quick start on the Windows PC
 
-1. Download **`MatePad-11-Companion-1.5.0-win-x64.zip`** from the [latest release](https://github.com/pallefar/matepad-11-companion/releases/latest), or use the ZIP built in this workspace. Copy the app ZIP to the Windows 10/11 x64 PC.
+1. Download **`MatePad-11-Companion-1.5.1-win-x64.zip`** from the [latest release](https://github.com/pallefar/matepad-11-companion/releases/latest), or use the ZIP built in this workspace. Copy the app ZIP to the Windows 10/11 x64 PC.
 2. Unzip the app anywhere writable (not `Program Files`). Run **`MatePad 11 Companion.exe`**. It is unsigned, so SmartScreen may show “Windows protected your PC” → **More info → Run anyway**.
 3. Choose the workspace:
    - **Public release / fresh workspace:** keep the default folder. Open **Tool pack**, press **Fetch external pack**, and download the open tools (platform-tools, 7-Zip, KernelPatch, Magisk, APatch). Or import the original pack if you already have it.
@@ -128,7 +128,7 @@ Both require an unlocked bootloader. Both have a switch-method control; prerequi
 
 | File | Contents |
 |---|---|
-| `dist/MatePad-11-Companion-1.5.0-win-x64.zip` | Unsigned portable Windows app, docs, licenses. No proprietary device binaries. |
+| `dist/MatePad-11-Companion-1.5.1-win-x64.zip` | Unsigned portable Windows app, docs, licenses. No proprietary device binaries. |
 | `dist/MatePad-11-Workspace-1.0.0.zip` | Preloaded `MatePad11` workspace: platform-tools, 7-Zip, Magisk, APatch, KernelPatch, QSaharaServer, fh_loader 23.06, the two signed unlock images, driver installer, manifest and checksums. For personal use; not MIT. |
 
 SHA-256 values are in `dist/CHECKSUMS.txt` and the adjacent `.sha256` files.

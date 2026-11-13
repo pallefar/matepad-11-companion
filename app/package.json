@@ -1,7 +1,7 @@
 {
   "name": "matepad-11-companion",
   "productName": "MatePad 11 Companion",
-  "version": "1.5.0",
+  "version": "1.5.1",
   "description": "Setup, readiness, unlock and root companion for the Huawei MatePad 11 (DBY-W09).",
   "main": "main.js",
   "author": "MatePad 11 Companion",

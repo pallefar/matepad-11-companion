@@ -102,6 +102,7 @@ $log = Join-Path $env:TEMP 'matepad-update.log'
 try { Start-Transcript -Path $log -Append | Out-Null } catch {}
 $backup = $null
 $staging = $null
+Set-Location -LiteralPath $env:TEMP
 try {
   Wait-Process -Id $ProcessId -Timeout 120 -ErrorAction SilentlyContinue
   Start-Sleep -Milliseconds 700
@@ -208,7 +209,7 @@ function createUpdaterService({ app, logger, isDemo }) {
     const child = spawn(
       powershell,
       ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', scriptPath, '-ProcessId', String(process.pid), '-Zip', zipPath, '-Target', target, '-Exe', exe],
-      { detached: true, windowsHide: true, stdio: 'ignore' },
+      { cwd: work, detached: true, windowsHide: true, stdio: 'ignore' },
     );
     child.unref();
     logger.good('update', `Update ${info.latest} downloaded and verified; restarting through the updater.`);

@@ -131,11 +131,11 @@ The E2E summary JSON (check list + zero errors) is written under the OS temp dir
 
 ## Artifact
 
-`dist/MatePad-11-Companion-1.5.0-win-x64.zip` contains the unsigned Windows x64 folder build and the user docs. SHA-256 values for the ZIP and the executable are in `dist/CHECKSUMS.txt` and `dist/MatePad-11-Companion-1.5.0-win-x64.zip.sha256`.
+`dist/MatePad-11-Companion-1.5.1-win-x64.zip` contains the unsigned Windows x64 folder build and the user docs. SHA-256 values for the ZIP and the executable are in `dist/CHECKSUMS.txt` and `dist/MatePad-11-Companion-1.5.1-win-x64.zip.sha256`.
 
 ## App updater
 
-The updater checks the latest published GitHub release, selects `MatePad-11-Companion-<version>-win-x64.zip`, verifies the GitHub asset SHA-256 (falling back to the release `.sha256`) and self-replaces only on a packaged Windows build. Mac/dev builds link to the release page. Unit tests cover version comparison, asset selection, trusted URLs and release metadata; the UI card is covered by E2E. The PowerShell folder-swap helper has **not** been executed on Windows in this session.
+The updater checks the latest published GitHub release, selects `MatePad-11-Companion-<version>-win-x64.zip`, verifies the GitHub asset SHA-256 (falling back to the release `.sha256`) and self-replaces only on a packaged Windows build. Mac/dev builds link to the release page. Unit tests cover version comparison, asset selection, trusted URLs and release metadata; the UI card is covered by E2E. A live check run with a simulated 1.4.0 client against GitHub returned latest 1.5.0, the correct Windows asset, and the release SHA-256 digest. The PowerShell folder-swap helper has **not** been executed on Windows in this session.
 
 ## Accessibility audit
 
