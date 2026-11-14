@@ -156,6 +156,7 @@ function createIpc({
         toolkitPath: state.toolkitPath,
         method: state.method,
         theme: state.theme || 'dark',
+        supportUrl: state.supportUrl || null,
         demo: Boolean(state.demo),
         acknowledgements: state.acknowledgements,
         progress: state.progress,
@@ -302,6 +303,19 @@ function createIpc({
     }
     logger.info('settings', `Theme: ${next}`);
     return { theme: next };
+  });
+
+  handle('app:set-support-url', ({ url }) => {
+    const next = store.setSupportUrl(url);
+    logger.info('support', next ? 'Support session link saved.' : 'Support session link cleared.');
+    return { supportUrl: next };
+  });
+
+  handle('app:open-support', async () => {
+    const url = store.get().supportUrl;
+    if (!url) throw new Error('No support session link is configured.');
+    await shell.openExternal(url);
+    return { url };
   });
 
   handle('app:set-method', ({ method }) => {

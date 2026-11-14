@@ -1011,3 +1011,8 @@ html[data-theme="light"] .toast { box-shadow: 0 18px 50px rgba(50, 35, 20, 0.2);
   .update-chip .update-chip-text { display: none; }
   .update-chip { max-width: 34px; padding: 0 9px; }
 }
+
+/* ============ support session ============ */
+
+.support-url { flex: 1; min-width: 240px; max-width: 620px; }
+.support-card .setting-row { padding-top: 0; }

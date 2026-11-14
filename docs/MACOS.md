@@ -13,12 +13,13 @@ The companion is an Electron app and runs on macOS. **The unlock/root workflow i
 
 | Area | Works? | Notes |
 |---|---|---|
-| Companion UI, Step by step, support panel | Yes | Tested on macOS; 50 unit / 35 Playwright checks |
+| Companion UI, Step by step, support panel | Yes | Tested on macOS; 52 unit / 36 Playwright checks |
 | Tool-pack inventory, imports and downloads | Yes | Open tools and the external pack can be downloaded and hash-checked |
 | `adb` and `fastboot` commands | Yes | Real commands were executed during macOS verification |
 | Device passport, battery, OS, apps via adb | Yes, if authorized | No Windows driver check |
 | System check: tool versions, phone state, manager apps | Yes | Driver rows correctly report Windows-only |
 | Diagnostics, masked support summary, GitHub issue template | Yes | Serial is masked in diagnostics |
+| Support-session link | Yes, localhost or HTTPS | `http://127.0.0.1:52188` works only on this Mac; a Windows PC needs a secure tunnel |
 | Light and dark themes | Yes | Verified |
 | Build `MatePadToolbox.exe` | **No** | Upstream WinUI 3 / XAML compiler is Windows-only |
 | `QSaharaServer.exe`, `fh_loader.exe`, Qualcomm 9008 driver | **No** | Windows PE binaries and Windows kernel USB drivers |

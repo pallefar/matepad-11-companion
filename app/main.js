@@ -18,7 +18,7 @@ const { createIpc } = require('./src/main/ipc');
 const { seedDemoLogsIfNeeded } = require('./src/main/demo-logs');
 const { ensureDir } = require('./src/main/files');
 
-const VERSION = '1.5.2';
+const VERSION = '1.6.0';
 const APP_NAME = 'MatePad 11 Companion';
 
 function parseArgs(argv) {
@@ -209,6 +209,19 @@ app.whenReady().then(async () => {
   const store = createStore({ userData, home: app.getPath('home'), locale: app.getLocale() });
   if (args.demo && !store.isDemo()) store.setDemo(true);
   if (args.lang && ['en', 'zh'].includes(args.lang)) store.setLanguage(args.lang);
+  if (!store.get().supportUrl) {
+    const explicit = process.env.MATEPAD_SUPPORT_URL;
+    const localSession = process.platform === 'darwin' ? process.env.DSH_WEB_URL : null;
+    for (const candidate of [explicit, localSession]) {
+      if (!candidate) continue;
+      try {
+        store.setSupportUrl(candidate);
+        break;
+      } catch {
+        /* ignore invalid environment overrides */
+      }
+    }
+  }
   nativeTheme.themeSource = store.get().theme === 'light' ? 'light' : 'dark';
 
   const logger = new Logger({ version: VERSION });

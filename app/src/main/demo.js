@@ -200,7 +200,7 @@ function makeDemoChecks(device = makeDemoDevice()) {
 function makeDemoLogs(now = new Date()) {
   const base = now.getTime() - 42000;
   const entries = [
-    ['info', 'app', 'MatePad 11 Companion 1.5.2 started (demo profile)'],
+    ['info', 'app', 'MatePad 11 Companion 1.6.0 started (demo profile)'],
     ['good', 'workspace', 'Toolkit found: C:\\MatePad11\\MatePadToolbox.exe'],
     ['info', 'inventory', 'Scanned 27 expected paths; APatch requirements present'],
     ['info', 'adb', 'adb devices -l → 1 device'],

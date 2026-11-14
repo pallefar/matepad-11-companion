@@ -228,6 +228,20 @@ async function snap(page) {
   assert.equal(await page.locator('[data-update-top]').count(), 1);
   assert.ok((await page.locator('[data-update-top]').getAttribute('aria-label'))?.length > 0);
   pass('App updates card and top-corner status render current/latest/check control');
+
+  await page.locator('#support-url').fill('http://127.0.0.1:52188/');
+  await page.locator('[data-action="save-support"]').click();
+  await page.waitForTimeout(500);
+  let supportSnap = await snap(page);
+  assert.equal(supportSnap.state.supportUrl, 'http://127.0.0.1:52188/');
+  await page.locator('[data-action="copy-debug"]').first().click();
+  await page.waitForTimeout(300);
+  const debug = await page.evaluate(() => navigator.clipboard.readText());
+  assert.match(debug, /debug report/i);
+  assert.match(debug, /Host: macOS/i);
+  assert.match(debug, /System check:/i);
+  assert.match(debug, /Update:/i);
+  pass('support-session link saves and debug report copies app/checks/errors');
   await page.locator('#view [data-action="set-language"][data-value="zh"]').click();
   await page.waitForTimeout(500);
   assert.equal(await page.locator('html').getAttribute('lang'), 'zh-CN');

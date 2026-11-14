@@ -530,6 +530,7 @@ function renderChrome() {
       snap.state.theme === 'light' ? 'moon' : 'sun',
     )}</button>
     <button class="icon-btn" data-nav="console" title="${esc(t('topbar.console'))}" aria-label="${esc(t('topbar.console'))}">${icon('console')}</button>
+    <button class="icon-btn" data-action="support-shortcut" title="${esc(snap.state.supportUrl ? t('support.open') : t('support.set'))}" aria-label="${esc(snap.state.supportUrl ? t('support.open') : t('support.set'))}">${icon('help')}</button>
     ${updateTopMarkup()}`;
   refreshUpdateTop();
 
@@ -1524,6 +1525,62 @@ function guideSupportSummary() {
   ].join('\n');
 }
 
+
+function debugReport() {
+  const snap = state.snapshot;
+  const t = state.t;
+  const checks = snap.systemChecks;
+  const steps = guideStepDefs();
+  const current = steps.find((step) => step.current) || steps[steps.length - 1];
+  const logs = (state.logCache || [])
+    .filter((entry) => ['warn', 'error'].includes(entry.level))
+    .slice(-30)
+    .map((entry) => `${entry.ts} ${entry.level} [${entry.source}] ${entry.message}`);
+  const gates = (snap.gates?.gates || []).map((gate) => `${gate.id}=${gate.status}`).join(', ');
+  return [
+    t('support.reportTitle'),
+    `App: ${snap.app?.name || 'MatePad 11 Companion'} ${snap.app?.version || ''}`.trim(),
+    `Host: ${snap.app?.host || 'unknown'} (${snap.app?.platform || 'unknown'})`,
+    `Mode: ${snap.demo ? 'demo preview (simulated values)' : 'live'}`,
+    `View: ${state.view}`,
+    `Current step: ${current.index + 1}/${steps.length} ${current.title}`,
+    `Workspace: ${snap.state.workspace}`,
+    `Support link: ${snap.state.supportUrl ? 'configured' : 'not configured'}`,
+    `Device: ${snap.demo ? 'simulated ' : ''}${snap.device?.model || 'none'} · ${snap.device?.state || 'none'} · HarmonyOS ${snap.device?.os?.version || '?'} · battery ${snap.device?.battery?.level ?? '?'}%`,
+    `Inventory: ${snap.inventory?.requiredPresent ?? 0}/${snap.inventory?.requiredCount ?? 0} required`,
+    `Gates: ${gates || 'none'}`,
+    `System check: ${checks ? `adb=${checks.tools?.adb?.status}, fastboot=${checks.tools?.fastboot?.status}, drivers=${checks.drivers?.adb?.status}, phone=${checks.phone?.connection?.status}` : 'not run'}`,
+    `Manager apps: ${checks ? `magisk=${checks.apps?.magisk?.status}, apatch=${checks.apps?.apatch?.status}, su=${checks.apps?.su?.status}` : 'not run'}`,
+    `Update: current=${snap.update?.current || snap.app?.version || '?'} latest=${snap.update?.latest || '?'} available=${snap.update?.available ?? 'unknown'} checked=${snap.update?.checkedAt || 'never'}`,
+    'Recent warnings/errors:',
+    ...(logs.length ? logs : ['  none']),
+  ].join('\n');
+}
+
+function supportCard() {
+  const snap = state.snapshot;
+  const t = state.t;
+  const url = snap.state.supportUrl || '';
+  return `<div class="card support-card">
+    ${cardTitle('help', t('support.title'))}
+    <p class="small muted">${esc(t('support.text'))}</p>
+    <div class="setting-row">
+      <div><div class="label">${esc(t('support.session'))}</div><div class="sub">${esc(t('support.sessionText'))}</div></div>
+    </div>
+    <div class="row mt-8" style="gap:8px;align-items:center;flex-wrap:wrap">
+      <input class="input support-url" id="support-url" type="url" spellcheck="false" value="${esc(url)}" placeholder="${esc(t('support.placeholder'))}" aria-label="${esc(t('support.session'))}">
+      ${button(t('support.save'), 'save-support', { tone: 'btn-ghost', size: 'btn-sm', iconName: 'save' })}
+    </div>
+    <div class="row mt-12" style="gap:8px;flex-wrap:wrap">
+      ${button(t('support.open'), 'open-support', { tone: 'btn-primary', size: 'btn-sm', iconName: 'external', disabled: !url })}
+      ${button(t('support.copyDebug'), 'copy-debug', { tone: 'btn-ghost', size: 'btn-sm', iconName: 'copy' })}
+      ${button(t('guide.export'), 'export-diagnostics', { tone: 'btn-ghost', size: 'btn-sm', iconName: 'save' })}
+      ${linkButton(t('guide.issue'), guideSupportIssueUrl(), { arrow: true, size: 'btn-sm' })}
+    </div>
+    <div class="small dim mt-8">${esc(t('support.note'))}</div>
+  </div>`;
+}
+
 function guideSupportIssueUrl() {
   const snap = state.snapshot;
   const steps = guideStepDefs();
@@ -1571,6 +1628,8 @@ function guideView() {
   const supportButtons = `
     ${button(t('guide.export'), 'export-diagnostics', { tone: 'btn-ghost', size: 'btn-sm', iconName: 'save' })}
     ${button(t('guide.copy'), 'copy-support', { tone: 'btn-ghost', size: 'btn-sm', iconName: 'copy' })}
+    ${button(t('support.copyDebug'), 'copy-debug', { tone: 'btn-ghost', size: 'btn-sm', iconName: 'copy' })}
+    ${snap.state.supportUrl ? button(t('support.open'), 'open-support', { tone: 'btn-ghost', size: 'btn-sm', iconName: 'external' }) : button(t('support.set'), 'support-shortcut', { tone: 'btn-ghost', size: 'btn-sm', iconName: 'settings' })}
     ${linkButton(t('guide.issue'), guideSupportIssueUrl(), { arrow: true, size: 'btn-sm' })}
     ${linkButton(t('guide.runbook'), `${SUPPORT_REPO}/blob/main/docs/WINDOWS-RUNBOOK.md`, { arrow: true, size: 'btn-sm' })}
     ${linkButton(t('guide.toolpack'), `${SUPPORT_REPO}/blob/main/docs/TOOL-PACK.md`, { arrow: true, size: 'btn-sm' })}
@@ -2221,6 +2280,7 @@ function consoleView() {
   </div>
   <div class="row mt-12" style="gap:8px">
     ${button(t('common.copy'), 'copy-logs', { tone: 'btn-ghost', size: 'btn-sm', iconName: 'copy' })}
+    ${button(t('support.copyDebug'), 'copy-debug', { tone: 'btn-ghost', size: 'btn-sm', iconName: 'copy' })}
     ${button(t('console.export'), 'export-diagnostics', { tone: 'btn-ghost', size: 'btn-sm', iconName: 'save' })}
   </div>`;
 }
@@ -2302,6 +2362,7 @@ function settingsView() {
           </div>
         </div>
       </div>
+      ${supportCard()}
       ${updateCard()}
       <div class="card">
         ${cardTitle('settings', t('settings.language'))}
@@ -2690,6 +2751,35 @@ async function handleAction(action, element) {
       }
       return;
     }
+    case 'save-support': {
+      const input = document.querySelector('#support-url');
+      const result = await run(() => api.setSupportUrl(input?.value || ''), { success: state.t('support.saved') });
+      if (result) {
+        await refreshSnapshot();
+        render();
+      }
+      return;
+    }
+    case 'open-support':
+      if (!snap.state.supportUrl) {
+        navigate('settings');
+        setTimeout(() => document.querySelector('#support-url')?.focus(), 80);
+        return;
+      }
+      await run(() => api.openSupport());
+      return;
+    case 'support-shortcut':
+      if (snap.state.supportUrl) {
+        await run(() => api.openSupport());
+      } else {
+        navigate('settings');
+        setTimeout(() => document.querySelector('#support-url')?.focus(), 80);
+      }
+      return;
+    case 'copy-debug':
+      await copyText(debugReport());
+      toast(state.t('support.copied'), 'good');
+      return;
     case 'choose-backup': {
       if (snap.demo) return;
       const result = await api.chooseBackup();

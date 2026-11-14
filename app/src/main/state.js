@@ -3,6 +3,7 @@
 const path = require('node:path');
 const { readJson, writeJsonAtomic } = require('./files');
 const { makeDemoState } = require('./demo');
+const { normalizeSupportUrl } = require('../core/support');
 
 function defaultWorkspace(home) {
   return path.join(home, 'MatePad11');
@@ -17,6 +18,7 @@ function defaultState({ home, locale = 'en' }) {
     toolkitPath: null,
     method: 'apatch',
     theme: 'dark',
+    supportUrl: null,
     demo: false,
     acknowledgements: {
       disclaimer: null,
@@ -57,6 +59,11 @@ function mergeState(defaults, loaded) {
   if (!['apatch', 'magisk'].includes(merged.method)) merged.method = 'apatch';
   if (!['en', 'zh'].includes(merged.language)) merged.language = 'en';
   if (!['dark', 'light'].includes(merged.theme)) merged.theme = 'dark';
+  try {
+    merged.supportUrl = normalizeSupportUrl(merged.supportUrl);
+  } catch {
+    merged.supportUrl = null;
+  }
   return merged;
 }
 
@@ -146,6 +153,13 @@ function createStore({ userData, home, locale }) {
         confirmed: true,
       };
       active().acknowledgements.backup = next;
+      save();
+      return next;
+    },
+    setSupportUrl(value) {
+      const next = normalizeSupportUrl(value);
+      real.supportUrl = next;
+      demoState.supportUrl = next;
       save();
       return next;
     },
