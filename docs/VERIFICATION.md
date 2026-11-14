@@ -8,7 +8,7 @@ Proprietary tool pack: **none** (a synthetic pack was used)
 
 This file records what actually ran. It is deliberately narrower than “the app works on Windows”.
 
-## Automated unit tests — 52 passed
+## Automated unit tests — 55 passed
 
 Command: `cd app && npm test`
 
@@ -25,9 +25,9 @@ Coverage:
 - System-check parsers: adb/fastboot versions, package list, Magisk/APatch/KernelSU, developer settings, su, Windows PnP classification, summary states.
 - EDL PowerShell JSON parsing (object/array/prefixed/BOM-less), COM extraction.
 
-Result: **52 pass, 0 fail**. All renderer translation keys used literally are present in both `en` and `zh` (532 literal keys checked; dynamic keys spot-checked).
+Result: **55 pass, 0 fail**. All renderer translation keys used literally are present in both `en` and `zh` (569 literal keys checked; dynamic keys spot-checked).
 
-## End-to-end — 36 checks passed
+## End-to-end — 39 checks passed
 
 Command: `cd app && node scripts/e2e.mjs` (Playwright launches the real Electron app).
 
@@ -72,8 +72,11 @@ Live workspace profile (macOS):
 34. EDL backup scanner records a folder with images + GPT/XML and unlocks the backup gate; the copied support summary clearly says demo/simulated and no commands were run.
 35. App updates card and the persistent top-corner status button render current/latest/check control on the demo profile.
 36. Support-session link saves and a debug report copies host, system check and update state.
+37. Qualcomm 9008 driver check reports **Driver installed** even while no port is present.
+38. Unlock renders HarmonyOS downgrade guidance and the toolkit downgrade button.
+39. The no-backup override card is exposed only when no backup is recorded, and the gate override is unit-tested.
 
-Result: **36 pass, 0 fail, zero console errors, zero page errors.**
+Result: **39 pass, 0 fail, zero console errors, zero page errors.**
 
 ## Download endpoints actually exercised
 
@@ -92,7 +95,7 @@ Result: **36 pass, 0 fail, zero console errors, zero page errors.**
 ## Windows package
 
 - Built with `electron-packager` for `win32-x64`, Electron 33.4.11, asar, icon.
-- `MatePad 11 Companion.exe` is a PE32+ x86-64 GUI executable; `resources/app.asar` is about 736 KB and contains only runtime files (`main.js`, `preload.js`, `src/**`, `node_modules/adm-zip`, licenses, README-FIRST). Tests, scripts, screenshots, docs, and build assets are excluded.
+- `MatePad 11 Companion.exe` is a PE32+ x86-64 GUI executable; `resources/app.asar` is about 754 KB and contains only runtime files (`main.js`, `preload.js`, `src/**`, `node_modules/adm-zip`, licenses, README-FIRST). Tests, scripts, screenshots, docs, and build assets are excluded.
 - A macOS asar build from the same configuration was launched with Playwright: title, Overview, six phases, zero renderer errors. This validates asar packaging, not the Windows binary.
 - The ready workspace ZIP was built separately (25 files, 37.9 MiB expanded / 24.9 MiB ZIP) and validated against the app inventory and its own manifest.
 - The final app ZIP is rebuilt after the external-pack feature; see `dist/CHECKSUMS.txt` for its SHA-256.
@@ -132,7 +135,11 @@ The E2E summary JSON (check list + zero errors) is written under the OS temp dir
 
 ## Artifact
 
-`dist/MatePad-11-Companion-1.6.0-win-x64.zip` contains the unsigned Windows x64 folder build and the user docs. SHA-256 values for the ZIP and the executable are in `dist/CHECKSUMS.txt` and `dist/MatePad-11-Companion-1.6.0-win-x64.zip.sha256`.
+`dist/MatePad-11-Companion-1.7.0-win-x64.zip` contains the unsigned Windows x64 folder build and the user docs. SHA-256 values for the ZIP and the executable are in `dist/CHECKSUMS.txt` and `dist/MatePad-11-Companion-1.7.0-win-x64.zip.sha256`.
+
+## EDL and downgrade
+
+Windows driver inspection now enumerates `pnputil /enum-drivers` in addition to present PnP interfaces. A Qualcomm QDLoader package reports **Driver installed** even without a live 9008 port; missing packages report **Driver missing**. The EDL card can run `adb reboot edl`, open Device Manager, launch `qcdriver.exe`, or rescan. HOS 4 gets a downgrade card linking the toolkit and an independent write-up; firmware is not bundled. The backup gate can be explicitly overridden with `NO BACKUP`, which produces a warning gate and no recovery image. EDL entry/actions and the Windows driver enumeration are **not executed on Windows in this session**.
 
 ## Support session
 

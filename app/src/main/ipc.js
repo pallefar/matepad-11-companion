@@ -2,6 +2,7 @@
 
 const path = require('node:path');
 const fs = require('node:fs');
+const { spawn } = require('node:child_process');
 const { BrowserWindow, shell, nativeTheme } = require('electron');
 const { computeReadiness } = require('../core/readiness');
 const { evaluateGates, summarizeGates, routeUnlock } = require('../core/parse');
@@ -93,6 +94,10 @@ function createIpc({
       backupVerified: Boolean(state.acknowledgements.backup?.confirmed),
       backupDetail: state.acknowledgements.backup
         ? `${state.acknowledgements.backup.imageCount} images · ${state.acknowledgements.backup.gptCount} GPT/XML · ${formatBytes(state.acknowledgements.backup.totalBytes)}`
+        : null,
+      backupOverride: Boolean(state.acknowledgements.backupOverride?.confirmed),
+      backupOverrideAt: state.acknowledgements.backupOverride?.confirmedAt
+        ? new Date(state.acknowledgements.backupOverride.confirmedAt).toISOString().slice(0, 10)
         : null,
       toolkitReady: toolkitPresent,
       method: state.method,
@@ -466,6 +471,13 @@ function createIpc({
     return { device: sanitizeDevice(device), systemChecks: lastChecks };
   });
 
+  handle('app:backup-override', ({ phrase }) => {
+    if (store.isDemo()) throw new Error('Demo mode: the backup override is disabled.');
+    const next = store.acknowledgeBackupOverride(phrase);
+    logger.warn('unlock', 'EDL backup gate overridden with NO BACKUP. No recovery image exists.');
+    return { backupOverride: next };
+  });
+
   handle('app:choose-backup', async (_payload, event) => {
     if (store.isDemo()) throw new Error('Demo mode: turn off the preview to scan a real backup folder.');
     const win = BrowserWindow.fromWebContents(event.sender);
@@ -506,6 +518,46 @@ function createIpc({
 
   handle('app:detect-edl', async () => {
     lastEdl = await edlService.detect();
+    return { edl: lastEdl };
+  });
+
+  handle('app:edl-action', async ({ action }) => {
+    if (store.isDemo()) throw new Error('Demo mode: no device or driver action was run.');
+    if (!['reboot-edl', 'open-driver', 'open-device-manager', 'rescan'].includes(action)) {
+      throw new Error('Unknown EDL action.');
+    }
+    if (action === 'open-device-manager') {
+      if (process.platform !== 'win32') throw new Error('Device Manager is Windows-only.');
+      const child = spawn('mmc.exe', ['devmgmt.msc'], { detached: true, stdio: 'ignore' });
+      child.unref();
+      return { ok: true };
+    }
+    if (action === 'open-driver') {
+      if (process.platform !== 'win32') throw new Error('The driver installer is Windows-only.');
+      const installer = path.join(store.get().workspace, 'tools', 'driver', 'qcdriver.exe');
+      if (!exists(installer)) throw new Error(`Driver installer not found: ${installer}`);
+      const child = spawn(installer, [], { detached: true, stdio: 'ignore' });
+      child.unref();
+      logger.info('drivers', 'Opened qcdriver.exe for the Qualcomm 9008 driver.');
+      return { ok: true, path: installer };
+    }
+    if (action === 'reboot-edl') {
+      const reboot = await deviceService.rebootEdl();
+      await new Promise((resolve) => setTimeout(resolve, 4000));
+      lastEdl = await edlService.detect();
+      try {
+        lastChecks = await checksService.runAll({ device: deviceService.getLastDevice(), force: true });
+      } catch (error) {
+        logger.warn('checks', `System check after EDL reboot failed: ${error.message}`);
+      }
+      return { reboot, edl: lastEdl };
+    }
+    lastEdl = await edlService.detect();
+    try {
+      lastChecks = await checksService.runAll({ device: deviceService.getLastDevice(), force: true });
+    } catch (error) {
+      logger.warn('checks', `System check after EDL rescan failed: ${error.message}`);
+    }
     return { edl: lastEdl };
   });
 

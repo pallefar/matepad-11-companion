@@ -221,6 +221,8 @@ function evaluateGates(input = {}) {
     backupAck = false,
     backupVerified = null,
     backupDetail = null,
+    backupOverride = false,
+    backupOverrideAt = null,
     toolkitReady = false,
     method = 'apatch',
   } = input;
@@ -377,14 +379,17 @@ function evaluateGates(input = {}) {
   });
 
   if (typeof backupVerified === 'boolean') {
+    const overridden = !backupVerified && Boolean(backupOverride);
     push({
       id: 'backup-files',
       label: 'EDL backup folder',
-      status: backupVerified ? 'pass' : 'fail',
+      status: backupVerified ? 'pass' : overridden ? 'warn' : 'fail',
       detail: backupVerified
         ? backupDetail || 'A backup folder was recorded and scanned.'
-        : 'Choose and record a backup folder containing images and GPT/rawprogram XML before unlocking.',
-      blocks: !backupVerified,
+        : overridden
+          ? `Backup deliberately skipped${backupOverrideAt ? ` on ${backupOverrideAt}` : ''}. No recovery image exists.`
+          : 'Choose and record a backup folder containing images and GPT/rawprogram XML before unlocking.',
+      blocks: !backupVerified && !overridden,
     });
   }
 

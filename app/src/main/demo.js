@@ -156,10 +156,11 @@ function makeDemoChecks(device = makeDemoDevice()) {
   const drivers = {
     supported: true,
     adb: { status: 'pass', present: true, name: 'HUAWEI ADB Interface', detail: 'HUAWEI ADB Interface' },
-    qualcomm: { status: 'unknown', present: false, name: null, detail: 'No Qualcomm 9008 port is present. This is normal unless the tablet is in EDL mode.' },
+    qualcomm: { status: 'pass', present: false, driverInstalled: true, name: null, detail: 'Qualcomm QDLoader driver package is installed. No 9008 device is present yet; enter EDL mode to verify the port.' },
     problems: [],
-    detail: '1 related Windows device found.',
+    detail: 'Qualcomm QDLoader driver package is installed; no 9008 device is attached.',
     deviceCount: 1,
+    driverPackages: { available: true, qualcomm: true, adb: true, samples: ['Original Name: qcusbser.inf', 'Provider Name: Qualcomm Incorporated'] },
   };
   const phone = {
     connection: { status: 'pass', detail: `${device.serialMasked} · ${device.model}` },
@@ -200,7 +201,7 @@ function makeDemoChecks(device = makeDemoDevice()) {
 function makeDemoLogs(now = new Date()) {
   const base = now.getTime() - 42000;
   const entries = [
-    ['info', 'app', 'MatePad 11 Companion 1.6.0 started (demo profile)'],
+    ['info', 'app', 'MatePad 11 Companion 1.7.0 started (demo profile)'],
     ['good', 'workspace', 'Toolkit found: C:\\MatePad11\\MatePadToolbox.exe'],
     ['info', 'inventory', 'Scanned 27 expected paths; APatch requirements present'],
     ['info', 'adb', 'adb devices -l → 1 device'],

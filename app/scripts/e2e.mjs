@@ -185,6 +185,10 @@ async function snap(page) {
   assert.ok(checkSnap.systemChecks?.checkedAt);
   await page.locator('.system-check').screenshot({ path: path.join(SHOTS, '23-system-check.png') });
   pass('system check executes tools, Windows drivers, phone state and manager apps');
+  const systemText = await page.locator('.system-check').innerText();
+  assert.match(systemText, /Qualcomm 9008 driver/i);
+  assert.match(systemText, /Driver installed/i);
+  pass('driver package check reports installed even while 9008 is absent');
   pass('device passport renders model, OS, battery, props');
 
   await goto(page, 'unlock');
@@ -203,6 +207,8 @@ async function snap(page) {
   await page.locator('#safety-close').click();
   await page.waitForTimeout(200);
   await page.screenshot({ path: path.join(SHOTS, '05-unlock.png') });
+  assert.equal(await page.locator('.downgrade-card').count(), 1);
+  pass('unlock offers HarmonyOS downgrade guidance');
   pass('unlock branch, 6 steps, step persistence, safety modal');
 
   await goto(page, 'root');
@@ -458,6 +464,13 @@ async function snap(page) {
   assert.ok(realSnap.state.acknowledgements.unlockWipe);
   assert.equal(realSnap.state.progress.unlock.steps.branch, true);
   pass('wipe acknowledgement and guide step persist to state');
+
+  await goto(page, 'unlock');
+  const overrideSnap = await snap(page);
+  const overrideCount = await page.locator('.backup-override-card').count();
+  if (overrideSnap.state.acknowledgements.backup?.confirmed) assert.equal(overrideCount, 0);
+  else assert.equal(overrideCount, 1);
+  pass('backup override is offered only when no backup is recorded');
 
   await goto(page, 'prepare');
   assert.equal(await page.locator('#view .notice.warn').count() >= 1, true);

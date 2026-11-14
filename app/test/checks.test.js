@@ -67,3 +67,31 @@ test('summarizes pass, warning, failure, and pending states', () => {
   assert.equal(summarizeStatuses(['pass', 'warn']).status, 'attention');
   assert.equal(summarizeStatuses(['pass', 'fail']).status, 'blocked');
 });
+
+const { parseDriverPackages } = require('../src/core/checks');
+
+test('finds Qualcomm and ADB driver packages in pnputil output', () => {
+  const text = `
+Published Name:     oem12.inf
+Original Name:      qcusbser.inf
+Provider Name:      Qualcomm Incorporated
+Class Name:         Ports
+Driver Version:     2.1
+
+Published Name:     oem13.inf
+Original Name:      android_winusb.inf
+Provider Name:      Google
+Class Name:         AndroidUsbDeviceClass
+`;
+  const parsed = parseDriverPackages(text);
+  assert.equal(parsed.available, true);
+  assert.equal(parsed.qualcomm, true);
+  assert.equal(parsed.adb, true);
+  assert.match(parsed.samples.join(' '), /qcusbser/);
+});
+
+test('does not claim a driver when none is installed', () => {
+  const parsed = parseDriverPackages('Published Name: oem1.inf\nOriginal Name: printer.inf');
+  assert.equal(parsed.qualcomm, false);
+  assert.equal(parsed.adb, false);
+});

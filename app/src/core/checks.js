@@ -106,6 +106,23 @@ function parseWindowsDriverJson(raw) {
   };
 }
 
+
+function parseDriverPackages(raw) {
+  const text = String(raw || '').replace(/\r/g, '');
+  const lines = text
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean);
+  const matches = lines.filter((line) => /qualcomm|qcusb|qusb|qhsusb|qdloader|9008|android_winusb|\badb\b|huawei/i.test(line));
+  const unique = [...new Set(matches)].slice(0, 12);
+  return {
+    available: lines.length > 0,
+    qualcomm: unique.some((line) => /qualcomm|qcusb|qusb|qhsusb|qdloader|9008/i.test(line)),
+    adb: unique.some((line) => /android_winusb|\badb\b|huawei/i.test(line)),
+    samples: unique,
+  };
+}
+
 function summarizeStatuses(statuses) {
   const counts = { pass: 0, warn: 0, fail: 0, pending: 0, unknown: 0 };
   for (const status of statuses) {
@@ -143,6 +160,7 @@ module.exports = {
   parseSetting,
   parseWhichSu,
   parseWindowsDriverJson,
+  parseDriverPackages,
   summarizeStatuses,
   collectStatuses,
 };

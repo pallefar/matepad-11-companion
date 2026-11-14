@@ -150,6 +150,18 @@ test('gates block a low battery, a non-DBY model and a missing backup acknowledg
   );
   assert.equal(withBackup.canProceed, true);
 
+  const overridden = summarizeGates(
+    evaluateGates({
+      ...base,
+      device: { ...base.device, battery: { level: 76 } },
+      backupVerified: false,
+      backupOverride: true,
+      backupOverrideAt: '2026-11-14',
+    }),
+  );
+  assert.equal(overridden.canProceed, true);
+  assert.ok(overridden.gates.some((g) => g.id === 'backup-files' && g.status === 'warn' && !g.blocks));
+
   const wrongModel = summarizeGates(
     evaluateGates({ ...base, device: { ...base.device, battery: { level: 76 }, model: 'DBY2-W09' } }),
   );

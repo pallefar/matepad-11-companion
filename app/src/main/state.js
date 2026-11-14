@@ -24,6 +24,7 @@ function defaultState({ home, locale = 'en' }) {
       disclaimer: null,
       unlockWipe: null,
       backup: null,
+      backupOverride: null,
     },
     progress: {
       unlock: { steps: {} },
@@ -156,6 +157,19 @@ function createStore({ userData, home, locale }) {
       save();
       return next;
     },
+    acknowledgeBackupOverride(phrase) {
+      if (String(phrase || '').trim().toUpperCase() !== 'NO BACKUP') {
+        throw new Error('Type NO BACKUP exactly to confirm.');
+      }
+      const next = {
+        phrase: 'NO BACKUP',
+        confirmedAt: new Date().toISOString(),
+        confirmed: true,
+      };
+      active().acknowledgements.backupOverride = next;
+      save();
+      return next;
+    },
     setSupportUrl(value) {
       const next = normalizeSupportUrl(value);
       real.supportUrl = next;
@@ -184,6 +198,7 @@ function createStore({ userData, home, locale }) {
       active().progress = { unlock: { steps: {} }, root: { steps: {} } };
       active().acknowledgements.unlockWipe = null;
       active().acknowledgements.backup = null;
+      active().acknowledgements.backupOverride = null;
       save();
     },
     getLastSaveError() {

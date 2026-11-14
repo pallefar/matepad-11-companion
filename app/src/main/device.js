@@ -323,6 +323,19 @@ function createDeviceService({ store, logger, environment }) {
     return { ok, output: result.combined.slice(0, 1200) };
   }
 
+  async function rebootEdl() {
+    if (isDemo()) return { ok: false, demo: true, message: 'Demo mode: no EDL reboot was run.' };
+    if (!lastDevice || lastDevice.state !== 'device') {
+      return { ok: false, error: 'No authorized tablet. Connect it with USB debugging enabled, then try again.' };
+    }
+    const result = await deviceAdb(lastDevice.serial, ['reboot', 'edl'], { timeoutMs: 15000 });
+    const ok = result.code === 0;
+    logger.log(ok ? 'info' : 'warn', 'edl', ok
+      ? 'ADB reboot edl requested. Waiting for the 9008 port; HOS 4 may ignore this command.'
+      : `ADB reboot edl failed: ${result.combined.slice(0, 300) || result.error || 'no output'}`);
+    return { ok, output: result.combined.slice(0, 600), code: result.code };
+  }
+
   async function reboot(mode) {
     if (isDemo()) return { ok: false, demo: true, message: 'Demo mode: no reboot command was run.' };
     if (!lastDevice || lastDevice.state !== 'device') return { ok: false, error: 'No authorized tablet.' };
@@ -347,6 +360,7 @@ function createDeviceService({ store, logger, environment }) {
     verifyRoot,
     installApk,
     reboot,
+    rebootEdl,
     reconnect,
     getLastDevice: () => lastDevice,
     getLastFastboot: () => lastFastboot,

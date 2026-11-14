@@ -122,3 +122,21 @@ test('theme changes while demo is enabled update the real preference too', () =>
     env.cleanup();
   }
 });
+
+
+test('records and clears an explicit NO BACKUP override', () => {
+  const env = tempEnv();
+  fs.mkdirSync(env.userData, { recursive: true });
+  fs.mkdirSync(env.home, { recursive: true });
+  try {
+    const store = createStore({ userData: env.userData, home: env.home, locale: 'en' });
+    assert.throws(() => store.acknowledgeBackupOverride('yes'), /NO BACKUP/);
+    const record = store.acknowledgeBackupOverride('no backup');
+    assert.equal(record.confirmed, true);
+    assert.equal(store.get().acknowledgements.backupOverride.confirmed, true);
+    store.resetProgress();
+    assert.equal(store.get().acknowledgements.backupOverride, null);
+  } finally {
+    env.cleanup();
+  }
+});

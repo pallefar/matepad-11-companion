@@ -25,6 +25,7 @@ const URLS = {
   kernelPatchApi: 'https://api.github.com/repos/bmax121/KernelPatch/releases/latest',
   kernelPatchPage: 'https://github.com/bmax121/KernelPatch/releases',
   deviceGuide: 'https://github.com/serkanvela/matepad11-hos42-root-gms',
+  hiSuite: 'https://consumer.huawei.com/en/support/hisuite/',
   xdaGuide: 'https://xdaforums.com/t/comprehensive-matepad-11-2021-dby-w09-rebrand-update-and-root-guide.4789106/',
   magiskInstall: 'https://topjohnwu.github.io/Magisk/install.html',
   harmonyProps: 'https://juejin.cn/post/7350520171612176435',

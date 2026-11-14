@@ -27,6 +27,8 @@ This companion adds the missing layer:
 - **Record** — persistent progress, live console, diagnostics export with the serial masked.
 - **Dark or light** — a persisted theme toggle in the top bar and **Settings → Appearance**. Both themes are screenshot-verified.
 - **Step by step** — a guided setup with one current step, the exact action, the success condition, an expandable “What you should see / Common fixes” panel, and support buttons for diagnostics, issue reporting and documentation.
+- **EDL driver check + downgrade route** — the driver check reports an installed Qualcomm 9008 package even when no port is present; the Unlock page links the toolkit downgrade page and a model-specific HOS 2/3 guide. See [docs/EDL-AND-DOWNGRADE.md](docs/EDL-AND-DOWNGRADE.md).
+- **Explicit no-backup override** — `NO BACKUP` acknowledgement removes the blocking backup gate; this is dangerous and leaves no recovery image.
 - **Support session + debug report** — save a support URL, open it from the top-right `?` button, and copy a masked debug report with checks/errors. See [docs/SUPPORT.md](docs/SUPPORT.md).
 - **In-app updates** — The **top-right status button** and **Settings → App updates** check GitHub; on Windows the app verifies SHA-256, downloads, swaps its folder and restarts. Mac/dev builds open the release page. See [docs/UPDATES.md](docs/UPDATES.md).
 - **Hard backup gate** — choose the folder containing your 9008 images and GPT/XML; the app scans it, records counts/size/time, and blocks unlock until it is confirmed.
@@ -43,7 +45,7 @@ This companion adds the missing layer:
 
 | Area | State |
 |---|---|
-| UI and logic | **Verified on macOS**: 52 unit tests, 36 Playwright checks against the real Electron app, EN + 中文, 1440/1120 widths, zero renderer errors |
+| UI and logic | **Verified on macOS**: 55 unit tests, 39 Playwright checks against the real Electron app, EN + 中文, 1440/1120 widths, zero renderer errors |
 | Official downloads | **Verified live**: platform-tools, 7-Zip, KernelPatch (kptools + kpimg), Magisk release, safe ZIP extraction |
 | External pack fetch | **Verified live**: signed firehose + ABL (hashes match the independent guide), QSaharaServer, fh_loader 23.06, signed Xiaomi driver installer; all five entries hash-checked |
 | Ready workspace | **Verified**: 25 files, APatch 10/10, driver entries present, manifest/checksums match; app reads it as ready |
@@ -73,7 +75,7 @@ See **[docs/TOOL-PACK.md](docs/TOOL-PACK.md)** for full provenance, hashes and c
 
 ## Quick start on the Windows PC
 
-1. Download **`MatePad-11-Companion-1.6.0-win-x64.zip`** from the [latest release](https://github.com/pallefar/matepad-11-companion/releases/latest), or use the ZIP built in this workspace. Copy the app ZIP to the Windows 10/11 x64 PC.
+1. Download **`MatePad-11-Companion-1.7.0-win-x64.zip`** from the [latest release](https://github.com/pallefar/matepad-11-companion/releases/latest), or use the ZIP built in this workspace. Copy the app ZIP to the Windows 10/11 x64 PC.
 2. Unzip the app anywhere writable (not `Program Files`). Run **`MatePad 11 Companion.exe`**. It is unsigned, so SmartScreen may show “Windows protected your PC” → **More info → Run anyway**.
 3. Choose the workspace:
    - **Public release / fresh workspace:** keep the default folder. Open **Tool pack**, press **Fetch external pack**, and download the open tools (platform-tools, 7-Zip, KernelPatch, Magisk, APatch). Or import the original pack if you already have it.
@@ -129,7 +131,7 @@ Both require an unlocked bootloader. Both have a switch-method control; prerequi
 
 | File | Contents |
 |---|---|
-| `dist/MatePad-11-Companion-1.6.0-win-x64.zip` | Unsigned portable Windows app, docs, licenses. No proprietary device binaries. |
+| `dist/MatePad-11-Companion-1.7.0-win-x64.zip` | Unsigned portable Windows app, docs, licenses. No proprietary device binaries. |
 | `dist/MatePad-11-Workspace-1.0.0.zip` | Preloaded `MatePad11` workspace: platform-tools, 7-Zip, Magisk, APatch, KernelPatch, QSaharaServer, fh_loader 23.06, the two signed unlock images, driver installer, manifest and checksums. For personal use; not MIT. |
 
 SHA-256 values are in `dist/CHECKSUMS.txt` and the adjacent `.sha256` files.
@@ -142,7 +144,7 @@ npm install
 npm start            # real state (macOS/Linux preview; Windows for the full path)
 npm run demo         # simulated DBY-W09, no device commands
 npm test             # 44 node:test checks
-node scripts/e2e.mjs # 36 Playwright checks against the real Electron app
+node scripts/e2e.mjs # 39 Playwright checks against the real Electron app
 npm run pack:win     # win32-x64 folder in ../dist
 ```
 

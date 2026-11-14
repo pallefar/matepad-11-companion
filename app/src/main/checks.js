@@ -5,6 +5,7 @@ const {
   parseAdbVersion,
   parseFastbootVersion,
   parseWindowsDriverJson,
+  parseDriverPackages,
   summarizeStatuses,
   collectStatuses,
 } = require('../core/checks');
@@ -100,6 +101,7 @@ function createChecksService({ store, logger, environment }) {
         qualcomm: { status: 'unknown', present: null, name: null, detail: 'Windows-only check; the 9008 port appears only in EDL mode.' },
         problems: [],
         detail: 'Driver inspection is available on Windows.',
+        driverPackages: { available: false, qualcomm: false, adb: false, samples: [] },
       };
     }
     if (!env.powershell?.found) {
@@ -109,6 +111,7 @@ function createChecksService({ store, logger, environment }) {
         qualcomm: { status: 'unknown', present: null, name: null, detail: 'PowerShell was not found; driver check skipped.' },
         problems: [],
         detail: 'PowerShell missing',
+        driverPackages: { available: false, qualcomm: false, adb: false, samples: [] },
       };
     }
     const result = await runCapture(
@@ -117,6 +120,9 @@ function createChecksService({ store, logger, environment }) {
       { timeoutMs: 20000 },
     );
     const parsed = parseWindowsDriverJson(result.combined);
+    const driverStore = await runCapture('pnputil.exe', ['/enum-drivers'], { timeoutMs: 20000 });
+    const packages = parseDriverPackages(driverStore.combined);
+    const driverStoreRead = driverStore.code === 0;
     const adbConnected = device?.state === 'device';
     const devicePresent = ['device', 'unauthorized'].includes(device?.state);
     const adb = parsed.adb.present
@@ -127,19 +133,32 @@ function createChecksService({ store, logger, environment }) {
           ? { status: 'warn', present: false, name: null, detail: 'No ADB interface found for the attached tablet. Reinstall the ADB driver.' }
           : { status: 'pending', present: false, name: null, detail: 'Connect the tablet to check the ADB interface driver.' };
     const qualcomm = parsed.qualcomm.present
-      ? { status: 'pass', present: true, name: parsed.qualcomm.name, detail: parsed.qualcomm.name }
-      : {
-          status: 'unknown',
-          present: false,
-          name: null,
-          detail: 'No Qualcomm 9008 port is present. This is normal unless the tablet is in EDL mode.',
-        };
+      ? { status: 'pass', present: true, driverInstalled: true, name: parsed.qualcomm.name, detail: parsed.qualcomm.name }
+      : packages.qualcomm
+        ? {
+            status: 'pass',
+            present: false,
+            driverInstalled: true,
+            name: null,
+            detail: 'Qualcomm QDLoader driver package is installed. No 9008 device is present yet; enter EDL mode to verify the port.',
+          }
+        : {
+            status: driverStoreRead ? 'warn' : 'unknown',
+            present: false,
+            driverInstalled: false,
+            name: null,
+            detail: driverStoreRead
+              ? 'No Qualcomm QDLoader/9008 driver package found. Install qcdriver.exe, then rescan; the 9008 port is only visible in EDL mode.'
+              : 'Could not enumerate installed driver packages. Open Device Manager and check Ports / Other devices for QUSB_BULK or QDLoader 9008.',
+          };
     const problems = parsed.problems;
     let detail = '';
     if (result.code !== 0) detail = firstProblem(result) || 'The driver query failed.';
     else if (problems.length) detail = `${problems.length} related device(s) report a driver problem.`;
     else if (parsed.adb.present || parsed.qualcomm.present) detail = `${parsed.deviceCount} related Windows device(s) found.`;
-    else detail = 'No Huawei/Qualcomm/Android devices are currently attached.';
+    else detail = packages.qualcomm
+      ? 'Qualcomm QDLoader driver package is installed; no 9008 device is attached.'
+      : 'No Huawei/Qualcomm/Android devices are attached, and no Qualcomm QDLoader package was found.';
     return {
       supported: true,
       adb,
@@ -147,6 +166,7 @@ function createChecksService({ store, logger, environment }) {
       problems,
       detail,
       deviceCount: parsed.deviceCount,
+      driverPackages: packages,
     };
   }
 

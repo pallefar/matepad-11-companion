@@ -28,6 +28,7 @@ const state = {
   backupBusy: false,
   updateChecking: false,
   updateProgress: null,
+  edlBusy: false,
   consoleFilter: 'all',
   consoleQuery: '',
   autoscroll: true,
@@ -1315,9 +1316,13 @@ function systemCheckCard() {
     const statusLabel =
       key === 'qualcomm'
         ? status === 'pass'
-          ? t('checks.present')
-          : status === 'unknown'
-            ? t('checks.notInEdl')
+          ? item.present
+            ? t('checks.present')
+            : t('checks.driverInstalled')
+          : status === 'warn'
+            ? t('checks.driverMissing')
+            : status === 'unknown'
+              ? t('checks.notInEdl')
             : status === 'pending'
               ? t('checks.noDevice')
               : t('common.unknown')
@@ -1467,7 +1472,7 @@ function guideStepDefs() {
       body: t('guide.backup.body'),
       success: t('guide.backup.success'),
       stuck: t('guide.backup.stuck'),
-      done: Boolean(ack) && Boolean(snap.state.acknowledgements.backup?.confirmed),
+      done: Boolean(ack) && Boolean(snap.state.acknowledgements.backup?.confirmed || snap.state.acknowledgements.backupOverride?.confirmed),
       view: 'unlock',
     },
     {
@@ -1688,10 +1693,27 @@ function deviceView() {
   const unauthorized = device?.state === 'unauthorized';
 
   const edl = snap.edl || { ports: [], supported: snap.env.isWindows };
+  const qcDriver = snap.systemChecks?.drivers?.qualcomm;
+  const qcLabel = qcDriver?.status === 'pass'
+    ? qcDriver.present
+      ? t('checks.present')
+      : t('checks.driverInstalled')
+    : qcDriver?.status === 'warn'
+      ? t('device.edlDriverMissing')
+      : t('device.edlDriverUnknown');
   const edlCard = `<div class="card">
     ${cardTitle('cable', t('device.edlTitle'), `<span class="mono dim small">COM / QUSB</span>`)}
     <p class="small muted">${esc(t('device.edlText'))}</p>
-    <div class="mt-12">${button(t('device.edlDetect'), 'detect-edl', { tone: 'btn-ghost', size: 'btn-sm', iconName: 'search' })}</div>
+    <div class="env-list mt-12">
+      <div class="env-row"><span class="label">${esc(t('device.edlDriver'))}</span><span class="value">${esc(qcLabel)}</span></div>
+    </div>
+    <div class="small dim mt-8">${esc(qcDriver?.detail || '')}</div>
+    <div class="row mt-12" style="gap:8px;flex-wrap:wrap">
+      ${button(state.edlBusy ? t('device.edlTrying') : t('device.edlTry'), 'edl-action', { tone: 'btn-primary', size: 'btn-sm', iconName: 'play', data: { kind: 'reboot-edl' }, disabled: snap.demo || state.edlBusy || !connected })}
+      ${button(t('device.edlDetect'), 'detect-edl', { tone: 'btn-ghost', size: 'btn-sm', iconName: 'search', disabled: state.edlBusy })}
+      ${button(t('device.edlInstallDriver'), 'edl-action', { tone: 'btn-ghost', size: 'btn-sm', iconName: 'download', data: { kind: 'open-driver' }, disabled: snap.demo || state.edlBusy })}
+      ${button(t('device.edlDeviceManager'), 'edl-action', { tone: 'btn-ghost', size: 'btn-sm', iconName: 'settings', data: { kind: 'open-device-manager' }, disabled: snap.demo || state.edlBusy })}
+    </div>
     <div class="mt-12">
       ${
         edl.ports?.length
@@ -1707,7 +1729,9 @@ function deviceView() {
       ${edl.error ? `<div class="small" style="color:var(--bad);margin-top:4px">${esc(edl.error)}</div>` : ''}
       ${!edl.supported ? `<div class="small dim" style="margin-top:6px">${esc(edl.note || '')}</div>` : ''}
     </div>
-    <div class="mt-12">${notice(esc(t('device.edlNote')), 'info', 'info')}</div>
+    <div class="mt-12">${notice(esc(t('device.edlManual')), 'warn', 'alert')}</div>
+    <div class="small dim mt-8">${esc(t('device.edlRescanHint'))}</div>
+    <div class="mt-12">${linkButton(t('downgrade.writeup'), snap.urls.deviceGuide, { arrow: true, size: 'btn-sm' })}</div>
   </div>`;
 
   if (!connected) {
@@ -1969,6 +1993,48 @@ function unlockView() {
     </div>`;
   })();
 
+  const backupOverride = snap.state.acknowledgements.backupOverride;
+  const overrideBlock = backupAck?.confirmed
+    ? ''
+    : `<div class="card backup-override-card">
+        ${cardTitle('alert', t('unlock.overrideTitle'), badge(backupOverride?.confirmed ? t('unlock.overrideDoneShort') : t('unlock.overrideBadge'), backupOverride?.confirmed ? 'warn' : 'warn'))}
+        ${backupOverride?.confirmed
+          ? notice(esc(t('unlock.overrideDone', { when: fmtDate(backupOverride.confirmedAt) })), 'warn', 'alert')
+          : `<p class="small muted">${esc(t('unlock.overrideText'))}</p>
+            <details class="disclosure">
+              <summary>${esc(t('unlock.overrideOpen'))}</summary>
+              <div class="disclosure-body">
+                <input class="input" id="backup-override-phrase" placeholder="${esc(t('unlock.overridePlaceholder'))}" autocomplete="off" spellcheck="false">
+                <label class="checkbox mt-12"><input type="checkbox" id="backup-override-confirm"> ${esc(t('unlock.overrideConfirm'))}</label>
+                <div class="mt-12">${button(t('unlock.overrideButton'), 'backup-override', { tone: 'btn-danger', size: 'btn-sm', iconName: 'alert', disabled: snap.demo })}</div>
+              </div>
+            </details>`}
+      </div>`;
+
+  const downgradeMajor = device?.os?.major;
+  const downgradeBadge = downgradeMajor >= 4
+    ? badge(t('downgrade.needed'), 'warn')
+    : downgradeMajor === 2 || downgradeMajor === 3
+      ? badge(t('downgrade.ready'), 'good')
+      : badge(t('downgrade.unknown'), '');
+  const downgradeBlock = `<div class="card downgrade-card">
+    ${cardTitle('layers', t('downgrade.title'), downgradeBadge)}
+    <p class="small muted">${esc(t('downgrade.text'))}</p>
+    <ol class="downgrade-steps mt-12">
+      <li>${esc(t('downgrade.step1'))}</li>
+      <li>${esc(t('downgrade.step2'))}</li>
+      <li>${esc(t('downgrade.step3'))}</li>
+      <li>${esc(t('downgrade.step4'))}</li>
+    </ol>
+    <div class="row mt-12" style="gap:8px;flex-wrap:wrap">
+      ${button(t('downgrade.openToolkit'), 'launch-toolkit', { tone: 'btn-primary', size: 'btn-sm', iconName: 'play', disabled: snap.demo || !snap.env.toolkit?.present })}
+      ${linkButton(t('downgrade.writeup'), snap.urls.deviceGuide, { arrow: true, size: 'btn-sm' })}
+      ${linkButton(t('downgrade.hisuite'), snap.urls.hiSuite, { arrow: true, size: 'btn-sm' })}
+      ${button(t('common.refresh'), 'refresh-device', { tone: 'btn-ghost', size: 'btn-sm', iconName: 'refresh', disabled: snap.demo })}
+    </div>
+    <div class="mt-12">${notice(esc(t('downgrade.warning')), 'warn', 'alert')}</div>
+  </div>`;
+
   const ackBlock = ack
     ? `<div class="notice good">${icon('check')}<div><strong>${esc(t('unlock.acked', { when: fmtDate(ack) }))}</strong></div></div>`
     : `<div class="ack-box">
@@ -2070,8 +2136,10 @@ function unlockView() {
   <div class="page-grid mt-20">
     <div class="stack-18">
       ${routePanel}
+      ${downgradeBlock}
       ${!device ? `<div>${notice(esc(t('unlock.noDevice')), 'warn', 'alert')}</div>` : ''}
       ${backupBlock}
+      ${overrideBlock}
       ${ackBlock}
       ${preflight}
       ${
@@ -2749,6 +2817,37 @@ async function handleAction(action, element) {
         state.updateProgress = null;
         render();
       }
+      return;
+    }
+    case 'backup-override': {
+      const phrase = document.querySelector('#backup-override-phrase')?.value || '';
+      const confirmed = Boolean(document.querySelector('#backup-override-confirm')?.checked);
+      if (phrase.trim().toUpperCase() !== 'NO BACKUP' || !confirmed) {
+        toast(state.t('unlock.overrideError'), 'warn');
+        return;
+      }
+      const result = await run(() => api.backupOverride(phrase), { success: state.t('unlock.overrideSuccess') });
+      if (result) {
+        await refreshSnapshot();
+        render();
+      }
+      return;
+    }
+    case 'edl-action': {
+      const kind = element.dataset.kind;
+      state.edlBusy = true;
+      render();
+      const success = kind === 'open-driver'
+        ? state.t('device.edlDriverOpened')
+        : kind === 'open-device-manager'
+          ? state.t('device.edlManagerOpened')
+          : kind === 'reboot-edl'
+            ? state.t('device.edlTried')
+            : '';
+      await run(() => api.edlAction(kind), { success });
+      state.edlBusy = false;
+      await refreshSnapshot();
+      render();
       return;
     }
     case 'save-support': {
